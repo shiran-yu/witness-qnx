@@ -3,7 +3,7 @@
 # Add the Witness layer to a mkqnximage image directory, through mkqnximage's own snippet mechanism:
 #   IFS:       dev-tpm-tis, witness-measure, the application manifest (all covered by the firmware's PCR 4)
 #   boot:      driver started in the IFS script; every file and symlink on /system measured into PCR 8 right after mount
-#   system:    QNX TCG stack (tss2, tabrm, tpm2-tools), libtss2-tcti-witness, tabrm config, witnessd
+#   system:    QNX TCG stack (tss2, tabrm), libtss2-tcti-witness, tabrm config, witnessd
 #   post-start tabrm on /dev/tpmrm0 over our TCTI; application layer measured into PCR 9; witnessd
 # Usage: witness-image.sh <image-dir>   then: (cd <image-dir> && mkqnximage --build)
 set -euo pipefail
@@ -60,17 +60,6 @@ lib/libtss2_helper.so.1=lib/libtss2_helper.so.1
 lib/libtcti_tabrm.so.1=lib/libtcti_tabrm.so.1
 lib/dll/tabrm_rm_mod_intel.so=lib/dll/tabrm_rm_mod_intel.so
 [perms=0555] bin/tabrm=sbin/tabrm
-[perms=0555] bin/tpm2_getrandom=usr/bin/tpm2_getrandom
-[perms=0555] bin/tpm2_getcap=usr/bin/tpm2_getcap
-[perms=0555] bin/tpm2_pcrread=usr/bin/tpm2_pcrread
-[perms=0555] bin/tpm2_pcrextend=usr/bin/tpm2_pcrextend
-[perms=0555] bin/tpm2_createek=usr/bin/tpm2_createek
-[perms=0555] bin/tpm2_createak=usr/bin/tpm2_createak
-[perms=0555] bin/tpm2_createprimary=usr/bin/tpm2_createprimary
-[perms=0555] bin/tpm2_quote=usr/bin/tpm2_quote
-[perms=0555] bin/tpm2_readpublic=usr/bin/tpm2_readpublic
-[perms=0555] bin/tpm2_flushcontext=usr/bin/tpm2_flushcontext
-[perms=0555] bin/tpm2_startup=usr/bin/tpm2_startup
 lib/libtss2-tcti-witness.so.0=$BUILD/libtss2-tcti-witness.so.0
 [perms=0555] bin/tpm-raw=$BUILD/tpm-raw
 [perms=0555] bin/witnessd=$BUILD/witnessd

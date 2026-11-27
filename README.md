@@ -122,7 +122,12 @@ changed with expected and measured digests, the replayed event log and PCR 0-9.
 ## Evidence of QNX use
 
 All target code is C11 built with `qcc -Vgcc_ntox86_64` for QNX 8.0 ([Makefile](Makefile), `-Werror`,
-stack protector, `_FORTIFY_SOURCE`).
+stack protector, `_FORTIFY_SOURCE`; `make ARCH=aarch64le` builds for ARM too).
+
+The QNX Driver Development Kit has frameworks for serial, I2C, SPI, HID, touch, network and CAN
+devices, none for TPMs; for other devices its guide says to "follow the _Writing a Resource Manager_
+documentation to create your own resource manager". `dev-tpm-tis` is that resource manager, for the
+TPM TIS register interface.
 
 | Component | File | QNX 8.0 facilities used |
 |---|---|---|
