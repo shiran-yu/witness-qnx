@@ -1,0 +1,28 @@
+==> gateway-b: first boot with its own TPM; the copied device key belongs to gateway-a's TPM
+witnessd: provisioned: device key bound to releases signed by the release key
+witnessd: release 2 recorded: older releases can no longer use the device key
+witnessd: device key released (boot state matches a signed release)
+  pass  device key (signed release + PCR 0,2,7) TPM released the key bound to the released boot state; it signed our nonce
+==> gateway-c: first boot with its own TPM; the copied device key belongs to gateway-a's TPM
+witnessd: provisioned: device key bound to releases signed by the release key
+witnessd: release 2 recorded: older releases can no longer use the device key
+witnessd: device key released (boot state matches a signed release)
+  pass  device key (signed release + PCR 0,2,7) TPM released the key bound to the released boot state; it signed our nonce
+==> gateway-b: roll back to v1
+  FAIL  device key (signed release + PCR 0,2,7) TPM refused to release the device key: tpm:error(2.0): policy failure in math operation or an invalid authPolicy value
+==> gateway-c: plant a modified TPM library
+fleet.sh dashboard  ->  http://127.0.0.1:8650
+==> gateway-a: witness verify against the current release (2)
+127.0.0.1:10023  TRUSTED   device key: released (proven by TPM signature)
+==> gateway-b: witness verify against the current release (2)
+127.0.0.1:10033  NOT TRUSTED   device key: locked (agent’s claim, not verified)
+  FAIL  system and /etc (PCR 8)      1 difference(s) from the release
+  FAIL  device key (signed release + PCR 0,2,7) TPM refused to release the device key: tpm:error(2.0): policy failure in math operation or an invalid authPolicy value
+       CHANGED  PCR 8  /system/etc/ssh/sshd_config
+                  expected 7c78a5ce42baa2c7…  got 4e2e95dc5d0f3652…  = release 1's version (rollback)
+==> gateway-c: witness verify against the current release (2)
+127.0.0.1:10043  NOT TRUSTED   device key: locked (agent’s claim, not verified)
+  FAIL  system and /etc (PCR 8)      1 difference(s) from the release
+  FAIL  device key (signed release + PCR 0,2,7) TPM refused to release the device key: tpm:parameter(1):value is out of range or is not correct for the context
+       CHANGED  PCR 8  /system/lib/libtss2-rc.so.1
+                  expected 80d9b3a872e6fd2a…  got 47e2bd83886f8d92…

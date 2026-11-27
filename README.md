@@ -199,11 +199,12 @@ anti-rollback bits), after `demo.sh build up enroll update`:
 ```bash
 demo/fleet.sh up          # gateway-b, gateway-c: copies of gateway-a's disk with new TPMs, enrolled; then
                           # gateway-b rolls back to v1, gateway-c gets a modified TPM library
-demo/fleet.sh dashboard   # gateway-a TRUSTED; gateway-b "sshd_config rolled back to release 5", key
+demo/fleet.sh dashboard   # gateway-a TRUSTED; gateway-b "sshd_config rolled back to release 1", key
                           # refused by its TPM; gateway-c "libtss2-rc.so.1 changed", key locked
 ```
 
-A copied disk does not copy the device: gateway-a's device key file cannot be loaded by another TPM,
+Recorded run: [docs/evidence/fleet.log](docs/evidence/fleet.log) (gateway-b's TPM fails `PolicyNV`, a
+policy failure; gateway-c's fails `PolicyPCR`, a value error). A copied disk does not copy the device: gateway-a's device key file cannot be loaded by another TPM,
 so `fleet.sh` deletes it and each clone provisions its own key and is enrolled with its own
 attestation key. A file that equals an older release's version is named as a rollback: `witness reference --previous`
 records the files that differ from the previous release, and `demo.sh update` passes it.
