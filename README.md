@@ -183,7 +183,8 @@ of 12 checks) and only the device key fails: the boot is a genuine v1, and the T
 
 ```bash
 cd host
-uv run witness dashboard -r ../.work/reference.json --state ../.work/state --device ecu-01=127.0.0.1:10023
+uv run witness dashboard -r ../.work/reference.json --state ../.work/state --device ecu-01=127.0.0.1:10023 \
+    --environment "QNX 8.0 on QEMU, software TPM"
 uv run witness dashboard --replay tests/fixtures     # no QNX or TPM needed: captured evidence, verified offline
 uv run witness dashboard --replay tests/fixtures/release   # signed release v2: current device, and one rolled back to v1
 ```
@@ -202,7 +203,9 @@ demo/fleet.sh dashboard   # gateway-a TRUSTED; gateway-b "sshd_config rolled bac
                           # refused by its TPM; gateway-c "libtss2-rc.so.1 changed", key locked
 ```
 
-A file that equals an older release's version is named as a rollback: `witness reference --previous`
+A copied disk does not copy the device: gateway-a's device key file cannot be loaded by another TPM,
+so `fleet.sh` deletes it and each clone provisions its own key and is enrolled with its own
+attestation key. A file that equals an older release's version is named as a rollback: `witness reference --previous`
 records the files that differ from the previous release, and `demo.sh update` passes it.
 
 ## Evidence of QNX use
@@ -279,6 +282,8 @@ driver chose (`interrupt driven` after its interrupt self-test, or polling):
   against the TIS specification and the register interface a discrete TPM exposes; it has not run on
   physical TPM hardware.
 - Timings measured under QEMU (KVM) are not hardware timings.
+- Enroll and verify under the same QEMU acceleration: with and without KVM the virtual CPU differs,
+  which changes PCR 1, and the firmware check fails (`vm.sh` prints the `accel` it used).
 - The attestation key is trusted on first use; binding it to the TPM manufacturer's endorsement
   certificate is the production step, and swtpm has no manufacturer certificate.
 - Measurement happens at boot. A file changed while the device runs is reported after the next

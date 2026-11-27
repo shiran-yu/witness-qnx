@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
-# A three-device fleet on one host, each QEMU VM with its own software TPM, all on the current release:
+# A three-device fleet on one host, each QEMU VM with its own software TPM, checked against the current release:
 #   gateway-a  the device from demo.sh, on release v2            -> TRUSTED
 #   gateway-b  rolled back to the genuinely signed v1            -> NOT TRUSTED, the TPM refuses its key
 #   gateway-c  a modified TPM library planted                    -> NOT TRUSTED, names the file
@@ -18,6 +18,7 @@ CLONES=("b:10032" "c:10042")  # name:ssh port (attestation on port+1)
 
 clone_image() {  # same disk and firmware, a new TPM: a second unit off the same production line
     local dir=$1
+    [ -d "$dir" ] && (cd "$dir" && "$SRC/scripts/vm.sh" stop >/dev/null 2>&1 || true)  # a re-run: power off first
     rm -rf "$dir"
     mkdir -p "$dir/output"
     cp -r "$WORK/vm/output/." "$dir/output/"
@@ -57,7 +58,8 @@ dashboard-hint)
 dashboard)
     exec uv run --project "$SRC/host" witness dashboard -r "$WORK/reference.json" --state "$WORK/state" \
         --device gateway-a=127.0.0.1:10023 --device gateway-b=127.0.0.1:10033 --device gateway-c=127.0.0.1:10043 \
-        --port "${PORT:-8650}"
+        --port "${PORT:-8650}" \
+        --environment "Three QNX 8.0 devices as QEMU VMs on one host, each with its own software TPM (swtpm)"
     ;;
 down)
     for spec in "${CLONES[@]}"; do
