@@ -178,7 +178,7 @@ on: Operation not permitted (/proc/boot/witness-measure)
 # echo touch /tmp/pwned > /boot/onboot                 (a boot hook; it would not be run anyway)
 sh: cannot create /boot/onboot: Read-only file system
 # swap /system/lib/libtss2-esys.so.1, then kill the agent so its supervisor restarts it
-  no effect: restarted agent 1212438 is a fork of supervisor 454676 (no exec), mapping the same 12 objects it loaded at the measured launch
+  no effect: restarted agent 1003542 is a fork of supervisor 454676 (no exec), mapping the same 11 objects it loaded at the measured launch
 ```
 
 Root can write `/system` and signal the agent, so the last check matters: the supervisor restarts the agent

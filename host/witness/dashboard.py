@@ -131,6 +131,8 @@ def chain_steps(checks: list[dict], enrolled: bool, findings: list[dict] = ()) -
             status, detail = "skipped", "Not enrolled: run `witness enroll` on a known-good boot to record the firmware baseline."
         else:
             status, detail = "not reached", "Not checked: an earlier step failed."
+        if status != "pass":  # the step text is the condition; it holds only for a passed step
+            explain = "Required: " + (explain[0].lower() if explain[1:2].islower() else explain[0]) + explain[1:]
         steps.append({"key": key, "title": title, "pcrs": pcrs, "explain": explain, "status": status,
                       "detail": detail, "checks": mine})
     return steps
