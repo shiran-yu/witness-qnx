@@ -117,8 +117,8 @@ qemu-system-x86_64 -enable-kvm -cpu host -m 1G -nographic \
 ```
 
 If QEMU says "Could not access KVM kernel module: Permission denied", add yourself to the `kvm` group
-and log in again, or drop `-enable-kvm -cpu host` and let QEMU emulate the CPU (slower, but the TPM
-steps work the same).
+and log in again, or replace `-enable-kvm -cpu host` with `-cpu max` so QEMU emulates the CPU (slower,
+but the TPM steps work the same; with no `-cpu` at all the IFS stops right after OVMF starts it).
 
 Keep QEMU's default `pc` machine: on `q35` the `if=ide` disk sits behind an AHCI controller, which
 `devb-eide` does not find, and the system partition is never mounted.
