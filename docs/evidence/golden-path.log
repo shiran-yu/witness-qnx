@@ -56,7 +56,7 @@ started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.lo
 (exit 2)
 ==> restoring the released files
 started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
-==> attacker plants a modified TPM library that witnessd loads
+==> attacker plants a modified TPM library that witnessd and tabrm load
 ==> rebooting
 started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
 127.0.0.1:10023  NOT TRUSTED   device key: locked (reported by agent)
