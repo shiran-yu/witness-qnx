@@ -171,7 +171,12 @@ class Fleet:
                 result.update(state="unreachable", trusted=False, error=f"no answer from witnessd: {error}",
                               checks=[], findings=[], chain=chain_steps([], enrollment is not None))
             else:
-                result.update(self.appraise(attestation, nonce, enrollment))
+                try:
+                    result.update(self.appraise(attestation, nonce, enrollment))
+                except Exception as error:  # anything unexpected in the evidence fails closed, never keeps the old state
+                    result.update(state="not trusted", trusted=False, checks=[{"name": "evidence", "ok": False,
+                                  "detail": f"malformed attestation: {error!r}"}], findings=[],
+                                  chain=chain_steps([], enrollment is not None))
             result["duration_ms"] = round((time.time() - started) * 1000)
             device.latest = result
             device.history.append({"time": started, "state": result["state"],
@@ -206,12 +211,16 @@ class Fleet:
 
     def summary(self, device: Device) -> dict:
         latest = device.latest or {}
+        state, error = latest.get("state", "checking"), latest.get("error")
+        age = time.time() - latest["time"] if "time" in latest else 0
+        if age > max(3 * self.interval, 30):  # a verdict that is not being renewed is not a verdict
+            state, error = "unreachable", f"no completed verification for {int(age)} s"
         return {"name": device.name, "address": device.address,
                 "evidence": os.path.basename(device.evidence) if device.evidence else None,
-                "state": latest.get("state", "checking"), "trusted": latest.get("trusted"),
+                "state": state, "trusted": latest.get("trusted") and state == "trusted",
                 "sealed": latest.get("sealed"), "sealed_proven": latest.get("sealed_proven", False),
                 "ak_fingerprint": latest.get("ak_fingerprint"),
-                "enrolled": latest.get("enrolled"), "time": latest.get("time"), "error": latest.get("error"),
+                "enrolled": latest.get("enrolled"), "time": latest.get("time"), "error": error,
                 "failed_check": next((f"{c['name']}: {c['detail']}" for c in latest.get("checks", []) if not c["ok"]), None),
                 "findings": latest.get("findings", []), "history": list(device.history)}
 

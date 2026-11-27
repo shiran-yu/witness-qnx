@@ -17,6 +17,12 @@ from .reference import build_reference
 from .verify import appraise, enrollment_from
 
 GREEN, RED, DIM, BOLD, RESET = "\033[32m", "\033[31m", "\033[2m", "\033[1m", "\033[0m"
+MAX_REPLY = 4 << 20  # bytes; a real attestation is about 40 KB
+
+
+def safe(text) -> str:
+    """Device-supplied text without control characters (no terminal escapes from the agent)."""
+    return "".join(c if c.isprintable() else "?" for c in str(text))
 
 
 def request_attestation(device: str, nonce: bytes, timeout: float = 20.0) -> dict:
@@ -26,6 +32,8 @@ def request_attestation(device: str, nonce: bytes, timeout: float = 20.0) -> dic
         data = b""
         while chunk := connection.recv(65536):
             data += chunk
+            if len(data) > MAX_REPLY:
+                raise ValueError(f"reply from {device} exceeds {MAX_REPLY} bytes")
     if not data:
         raise ConnectionError(f"no answer from witnessd at {device}")
     return json.loads(data)
@@ -38,15 +46,15 @@ def enrollment_path(directory: str, device: str) -> str:
 def print_verdict(verdict, device: str) -> None:
     color = GREEN if verdict.trusted else RED
     print(f"{BOLD}{device}{RESET}  {color}{BOLD}{'TRUSTED' if verdict.trusted else 'NOT TRUSTED'}{RESET}"
-          f"   device key: {'released' if verdict.sealed == 'unsealed' else verdict.sealed} "
+          f"   device key: {'released' if verdict.sealed == 'unsealed' else safe(verdict.sealed)} "
           f"{DIM}({'proven by TPM signature' if verdict.sealed_proven else 'reported by agent'}){RESET}")
     for check in verdict.checks:
         mark = f"{GREEN}pass{RESET}" if check.ok else f"{RED}FAIL{RESET}"
-        print(f"  {mark}  {check.name:<28} {DIM}{check.detail}{RESET}")
+        print(f"  {mark}  {check.name:<28} {DIM}{safe(check.detail)}{RESET}")
     for finding in verdict.findings:
-        line = f"  {RED}{finding['kind'].upper():>12}{RESET}  PCR {finding['pcr']}  {finding['what']}"
+        line = f"  {RED}{finding['kind'].upper():>12}{RESET}  PCR {finding['pcr']}  {safe(finding['what'])}"
         if "expected" in finding:
-            line += f"\n{'':18}expected {finding['expected'][:16]}…  got {str(finding['actual'])[:16]}…"
+            line += f"\n{'':18}expected {finding['expected'][:16]}…  got {safe(finding['actual'])[:16]}…"
         print(line)
 
 
@@ -65,6 +73,8 @@ def main(argv=None) -> int:
         command.add_argument("--state", default=".witness", help="directory for enrollment records")
         command.add_argument("--json", action="store_true", help="print the verdict as JSON")
         command.add_argument("--save", metavar="FILE", help="also save the nonce and raw attestation (evidence)")
+        if name == "enroll":
+            command.add_argument("--force", action="store_true", help="replace an existing enrollment")
 
     dashboard = commands.add_parser("dashboard", help="serve the fleet dashboard (re-verifies every --interval s)")
     dashboard.add_argument("-r", "--reference", help="reference.json (replay: defaults to DIR/reference.json)")
@@ -111,6 +121,9 @@ def main(argv=None) -> int:
             json.dump({"nonce": nonce.hex(), "attestation": attestation}, out, indent=1)
 
     if args.command == "enroll":
+        if os.path.exists(path) and not args.force:
+            print(f"{RED}{args.device} is already enrolled ({path}); use --force to replace it{RESET}")
+            return 1
         verdict = appraise(attestation, nonce, reference_values, None, enrolling=True)
         if not verdict.trusted:
             print_verdict(verdict, args.device)

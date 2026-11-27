@@ -74,7 +74,8 @@ up)
     grep -a -E 'Witness|witnessd' "$IMAGE/output/console.log" | tr -d '\r' || true
     ;;
 enroll)
-    "${WITNESS[@]}" enroll --device "$DEVICE" -r "$WORK/reference.json" --state "$WORK/state"
+    # --force: each build provisions a new device key, so the demo re-enrolls on purpose
+    "${WITNESS[@]}" enroll --force --device "$DEVICE" -r "$WORK/reference.json" --state "$WORK/state"
     ;;
 verify)
     "${WITNESS[@]}" verify --device "$DEVICE" -r "$WORK/reference.json" --state "$WORK/state"
@@ -94,7 +95,7 @@ tamper)
                      mv /system/bin/.witnessd.new /system/bin/witnessd'
         ;;
     lib)
-        say "attacker plants a modified TPM library that witnessd and tabrm load"
+        say "attacker plants a modified TPM library that witnessd loads"
         "${SSH[@]}" 'cp -n /system/lib/libtss2-rc.so.1 /data/var/witness/libtss2-rc.so.1.orig 2>/dev/null || true;
                      cp /system/lib/libtss2-rc.so.1 /system/lib/.rc.new && echo "# patched" >> /system/lib/.rc.new &&
                      mv /system/lib/.rc.new /system/lib/libtss2-rc.so.1'
@@ -112,9 +113,9 @@ restore)
     reboot_device
     ;;
 attack)
-    say "root on the device tries to extend PCR 8 back, use the resource manager, and borrow a measured type"
+    say "root on the device tries to extend PCR 8, run its own agent with the agent's type, and borrow the measurer's type"
     "${SSH[@]}" 'for c in "tpm-raw 80020000004100000182000000080000000940000009000000000000000001000b$(printf %064d 0)" \
-                          "env TPM_DEVICE=/dev/tpmrm0 tpm-raw 80010000000c0000017b0008" \
+                          "on -T witnessd_t /system/bin/witnessd -f -p 7651" \
                           "on -T witness_measure_t /proc/boot/witness-measure -p 8 -s forged"; do
                      echo "# $c"; sh -c "$c" 2>&1 && echo "  ALLOWED" || echo "  denied"; done'
     ;;

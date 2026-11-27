@@ -23,14 +23,13 @@ Path=1 - Intel 82371SB
 ---> Starting Networking
 ---> Starting sshd
 ---> Starting misc
----> Witness: starting tabrm (/dev/tpmrm0) over libtss2-tcti-witness
 ---> Witness: measuring applications into PCR 9
 ---> Witness: starting attestation agent (port 7650)
-witnessd: device key released (boot state matches the provisioned state)
-witnessd: listening on port 7650
 
 To exit QEMU, type <ctrl>a x
 
 Process count:23
 Startup complete
 QNX noname 8.0.0 2026/10/30-09:10:05EDT x86pc x86_64
+witnessd: device key released (boot state matches the provisioned state)
+witnessd: listening on port 7650
