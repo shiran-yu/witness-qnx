@@ -22,7 +22,7 @@ signature from the TPM, three questions:
 
 1. **Is this the image we released?** UEFI firmware measures the QNX IFS (boot image) into PCR 4.
 2. **Are the system files the released ones?** Witness measures every file and symlink on the system
-   partition and in `/etc` (`/data/var/etc`, the boot configuration; 252 on the demo image) into PCR 8
+   partition and in `/etc` (`/data/var/etc`, the boot configuration; 253 on the demo image) into PCR 8
    right after they are mounted, before any boot script reads them, and the applications into PCR 9
    before launch. The verifier predicts all of them from the build
    output.
@@ -149,14 +149,17 @@ demo/demo.sh down
 
 ### What you should see
 
-(253 measurements: 252 files and symlinks plus the end-of-measurement marker.) A complete recorded
-run (build, boot, enroll, attack, four tampers, restores, a signed update) is in
-[docs/evidence/golden-path.log](docs/evidence/golden-path.log), with the QNX boot console in
-[docs/evidence/qnx-console-last-boot.log](docs/evidence/qnx-console-last-boot.log).
+(254 measurements: 253 files and symlinks plus the end-of-measurement marker; PCR 9: witnessd and
+witness-report.) A complete recorded run (build, boot, enroll, attack, four tampers, restores, a signed
+update, a rollback) is in [docs/evidence/golden-path.log](docs/evidence/golden-path.log), with the QNX
+boot console in [docs/evidence/qnx-console-last-boot.log](docs/evidence/qnx-console-last-boot.log); the
+signed fleet reports accepted, then rejected after a tamper, then accepted after the restore are in
+[docs/evidence/fleet-reports.log](docs/evidence/fleet-reports.log). These runs used QEMU without KVM
+(`accel: -cpu max` in the log), so boot times there are emulation times.
 
 ```
 127.0.0.1:10023  TRUSTED   device key: released (proven by TPM signature)
-  pass  attestation key              AK 59a38e285aa23b6e
+  pass  attestation key              AK 440853652aaf657f
   pass  quote signature              ECDSA P-256 over TPMS_ATTEST
   pass  freshness                    quote carries this request's nonce
   pass  PCR values                   PCR 0-9 match the signed digest
@@ -165,8 +168,8 @@ run (build, boot, enroll, attack, four tampers, restores, a signed update) is in
   pass  boot image (PCR 4)           IFS is the released ifs.bin (Authenticode, measured by UEFI firmware)
   pass  event log (PCR 8)            log replays to the quoted PCR
   pass  event log (PCR 9)            log replays to the quoted PCR
-  pass  system and /etc (PCR 8)      253 measurement(s) match the release
-  pass  applications (PCR 9)         1 measurement(s) match the release
+  pass  system and /etc (PCR 8)      254 measurement(s) match the release
+  pass  applications (PCR 9)         2 measurement(s) match the release
   pass  device key (signed release + PCR 0,2,7) TPM released the key bound to the released boot state; it signed our nonce
 ```
 

@@ -8,16 +8,17 @@ overriding mask for controller 2, vector_base 0
 ---> Loading security policy
 ---> Witness: starting TPM driver
 dev-tpm-tis: intf_caps 0x30000697 int_vector 5
+dev-tpm-tis: self-test: localityChange interrupt seen (int_status 0x4)
 dev-tpm-tis: TPM 2.0 at 0xfed40000 vendor 0x1014 device 0x0001 rev 1, interrupt driven
 ---> Starting slogger2
 ---> Starting PCI Services
 ---> Starting fsevmgr
 ---> Starting devb
+---> Mounting file systems
 Path=0 - Intel 82371SB
  target=0 lun=0     Direct-Access(0) -          QEMU HARDDISK    Rev: 2.5+
 Path=1 - Intel 82371SB
  target=0 lun=0            CD-ROM(5) - QEMU     QEMU DVD-ROM     Rev: 2.5+
----> Mounting file systems
 ---> Mounting file systems
 ---> Witness: measuring system partition and boot configuration into PCR 8
 ---> Starting Networking
@@ -25,6 +26,7 @@ Path=1 - Intel 82371SB
 ---> Starting misc
 ---> Witness: measuring applications into PCR 9
 ---> Witness: starting attestation agent (port 7650)
+---> Witness: starting signed fleet reports (to the host, 10.0.2.2:8650)
 
 To exit QEMU, type <ctrl>a x
 

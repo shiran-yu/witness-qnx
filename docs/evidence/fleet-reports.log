@@ -1,0 +1,10 @@
+# Signed fleet reports, recorded 2026-11-27 at HEAD on QEMU (TCG, -cpu max) with swtpm: the device's witness-report
+# posts a challenge-bound report every 10 s; the fleet service (dashboard /api/report) accepts it only with the device key's signature.
+==> fleet service up (dashboard, /api/report); the device's witness-report posts every 10 s
+  fleet service: gateway-a trusted; signed reports accepted 4, last 2 s ago; rejected 0
+==> demo.sh tamper config (changes sshd_config, reboots)
+witnessd: device key LOCKED: boot state differs from the signed release (tpm:parameter(1):value is out of range or is not correct for the context)
+witnessd: listening on port 7650
+  fleet service: gateway-a not trusted; signed reports accepted 4, last 72 s ago; rejected 5 (last: unsigned: the device key was not available to sign)
+==> demo.sh restore (reboots)
+  fleet service: gateway-a trusted; signed reports accepted 8, last 2 s ago; rejected 5 (last: unsigned: the device key was not available to sign)
