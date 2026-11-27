@@ -31,7 +31,7 @@ def test_update_release_changes_only_the_replaced_file(tmp_path):
     image = os.path.join(os.path.dirname(__file__), "..", "..", ".work", "vm")
     if not os.path.exists(os.path.join(image, "output", "build", "system.build")):
         import pytest
-        pytest.skip("needs a built image in src/.work/vm")
+        pytest.skip("needs a built image in .work/vm (demo/demo.sh build)")
     v1 = build_reference(image)
     new = tmp_path / "sshd_config"
     new.write_text("MaxAuthTries 3\n")

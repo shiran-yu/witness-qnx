@@ -9,6 +9,10 @@
 > technology ([QNX-specific technologies](#qnx-specific-technologies)) · codelab
 > ([docs/codelab](docs/codelab/qnx-tpm-measured-boot-qemu.md)).
 
+![Fleet dashboard: three QNX 8.0 devices on QEMU, each with its own TPM. gateway-a is trusted and its
+device key is released; gateway-b was rolled back to release 1 and gateway-c runs a changed TPM library,
+so the verifier names the file and both devices' keys stay locked.](docs/img/fleet-dashboard.png)
+
 A fleet operator cannot see what a QNX device in the field actually booted. A changed binary or a
 changed config file on a gateway, a robot controller or an infusion pump looks the same from the
 outside until it misbehaves.

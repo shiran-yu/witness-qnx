@@ -124,6 +124,9 @@ def chain_steps(checks: list[dict], enrolled: bool, findings: list[dict] = ()) -
                 detail += ": " + "; ".join(named[:3]) + (f" and {len(named) - 3} more" if len(named) > 3 else "")
             if key == "firmware" and "(PCR " in mine[0]["name"]:
                 pcrs = mine[0]["name"].split("(PCR ")[1].rstrip(")").replace(",", ", ")
+            if key == "key" and "signed release" not in mine[0]["name"]:  # image built without a release key
+                explain = ("The TPM released the device's own key, which it allows only in the boot state the device "
+                           "was provisioned in (PolicyPCR), and the key signed this request.")
         elif key == "firmware" and not enrolled:
             status, detail = "skipped", "Not enrolled: run `witness enroll` on a known-good boot to record the firmware baseline."
         else:
