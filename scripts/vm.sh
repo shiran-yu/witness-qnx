@@ -30,6 +30,7 @@ start() {
     local tpm=()
     if [ "$TPM" = tis ]; then
         mkdir -p "$STATE"
+        [ ${#STATE} -lt 100 ] || die "swtpm socket path too long (${#STATE} + 5 chars, limit 107): clone to a shorter path"
         stop_swtpm  # a swtpm left from a crashed run would share this state directory
         # state (EK, NV) persists in $STATE across boots; the log is per boot
         "$SWTPM" socket --tpm2 --tpmstate dir="$STATE" --ctrl type=unixio,path="$STATE/sock" \

@@ -80,10 +80,9 @@ class ReportDesk:
             now = time.time()
             self.used = {n: t for n, t in self.used.items() if now - t <= CHALLENGE_TTL}
             fresh = issued is not None and nonce not in self.used
-            if fresh:
-                self.used[nonce] = issued
         if not fresh:
             return self._reject("replay")
+        # the challenge is spent only by a report whose signature verifies, so junk posted first cannot burn it
         if "r" not in body or "s" not in body:
             return self._reject("unsigned")
         try:
@@ -97,8 +96,13 @@ class ReportDesk:
             except (InvalidSignature, ValueError):
                 continue
             with self.lock:
-                count = self.accepted.get(name, {}).get("count", 0) + 1
-                self.accepted[name] = {"count": count, "time": time.time(), "report": report}
+                spent = nonce in self.used
+                if not spent:
+                    self.used[nonce] = issued
+                    count = self.accepted.get(name, {}).get("count", 0) + 1
+                    self.accepted[name] = {"count": count, "time": time.time(), "report": report}
+            if spent:
+                return self._reject("replay")
             return 200, {"accepted": True, "device": name}
         return self._reject("unknown-key")
 

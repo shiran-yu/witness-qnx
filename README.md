@@ -47,7 +47,8 @@ ssh) and the same key is released again, with no re-provisioning. A rollback doe
 release is numbered, and once the TPM has accepted release 2 it refuses release 1's genuine
 signature (`TPM2_PolicyNV` over a set-only NV bit field). A QNX security policy confines the TPM: once the device has booted, even
 `root` logged in over ssh cannot open `/dev/tpm0` or take the agent's type, so it cannot extend PCRs
-or use either key. The boot script itself can (it starts those components), so Witness replaces
+or use either key; the driver, the agent and the report app run as their own uid (70), so root cannot
+read or write their memory through `/proc` either. The boot script itself can (it starts those components), so Witness replaces
 the stock mount step: nothing on `/system`, in `/etc` or on the EFI partition runs before it is
 measured, and the stock `/boot/onboot` hook is not run at all.
 
@@ -171,7 +172,7 @@ signed PCR digest equal to the SHA-256 of the PCR 0-9 values the verifier judged
 
 ```
 127.0.0.1:10023  TRUSTED   device key: released (proven by TPM signature)
-  pass  attestation key              AK 440853652aaf657f
+  pass  attestation key              AK 40a3d606c9912f78
   pass  quote signature              ECDSA P-256 over TPMS_ATTEST
   pass  freshness                    quote carries this request's nonce
   pass  PCR values                   PCR 0-9 match the signed digest
@@ -198,9 +199,16 @@ on: Operation not permitted (/proc/boot/witness-measure)
 witness-report: no channel to witnessd: Operation not permitted
 # echo touch /tmp/pwned > /boot/onboot                 (a boot hook; it would not be run anyway)
 sh: cannot create /boot/onboot: Read-only file system
+# exec 3<>/proc/471060/as      (write the memory of witnessd; the same for dev-tpm-tis and witness-report)
+sh: cannot create /proc/471060/as: Operation not permitted
 # swap /system/lib/libtss2-esys.so.1, then kill the agent so its supervisor restarts it
-  no effect: restarted agent 974871 is a fork of supervisor 454676 (no exec), mapping the same 11 objects it loaded at the measured launch
+  no effect: restarted agent 1073175 is a fork of supervisor 471060 (no exec), mapping the same 11 objects it loaded at the measured launch
 ```
+
+The driver, `witnessd` and `witness-report` run as uid 70 (`on -T <type> -u 70:70` in the boot script),
+and the root login's type has no `xprocess_mem_read`, `xprocess_mem_write` or `xprocess_debug` ability
+for that uid, so `/proc/<pid>/as` is refused for reading and writing. `witness-measure` runs as root: it
+must read root-only files such as `/etc/shadow`, and it exits during boot, before any login.
 
 Root can write `/system` and signal the agent, so the last check matters: the supervisor restarts the agent
 with `fork`, never `exec`, and the agent loads no library after its measured launch (the TCTI is linked

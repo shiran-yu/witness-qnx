@@ -46,6 +46,14 @@ def test_replayed_or_invented_challenge_is_rejected():
     assert desk.submit(signed(keys["gateway-a"], "00" * 16))[0] == 403  # never issued
 
 
+def test_junk_posted_first_does_not_spend_the_challenge():
+    desk, keys = make_desk()
+    nonce = desk.challenge()
+    junk = {"report": json.dumps({"nonce": nonce, "seq": 1}), "r": "01", "s": "01"}
+    assert desk.submit(junk)[0] == 403
+    assert desk.submit(signed(keys["gateway-a"], nonce))[0] == 200
+
+
 def test_changed_report_or_foreign_key_is_rejected():
     desk, keys = make_desk()
     nonce = desk.challenge()

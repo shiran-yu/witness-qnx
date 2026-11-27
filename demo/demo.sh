@@ -196,6 +196,11 @@ attack)
                           "witness-report -c" \
                           "echo touch /tmp/pwned > /boot/onboot"; do
                      echo "# $c"; sh -c "$c" 2>&1 && echo "  ALLOWED" || echo "  denied"; done'
+    # the driver, the agent and the report app run as uid 70: root may not open their memory for writing
+    "${SSH[@]}" 'for n in dev-tpm-tis witnessd witness-report; do
+                     p=$(pidin -f an | awk -v n="$n" "\$2 ~ (\"/\" n \"\$\") || \$2 == n {print \$1; exit}");
+                     echo "# exec 3<>/proc/$p/as      (write the memory of $n)";
+                     sh -c "exec 3<>/proc/$p/as" 2>&1 && echo "  ALLOWED" || echo "  denied"; done'
     # root may write /system/lib and signal the agent: swap the TPM library, kill the agent, see what its supervisor restarts
     # (a library the agent maps; writing it in place is refused while mapped, so rename over it)
     "${SSH[@]}" 'l=/system/lib/libtss2-esys.so.1; cp $l /data/var/witness/esys.orig;

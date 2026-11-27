@@ -39,7 +39,7 @@ fi
 # 3. IFS script: start the driver before anything from the (not yet measured) system partition runs
 cat > "$SNIPPETS/ifs_start.witness" <<'EOF'
     display_msg "---> Witness: starting TPM driver"
-    START_P(tpm_driver_t) dev-tpm-tis -i 5
+    STARTU_P(tpm_driver_t,70) dev-tpm-tis -i 5 -u 70 -g 70
     waitfor /dev/tpm0 5
 EOF
 
@@ -88,10 +88,13 @@ EOF
 cat > "$SNIPPETS/post_start.witness" <<'EOF'
 echo "---> Witness: measuring applications into PCR 9"
 START_P(witness_measure_t) /proc/boot/witness-measure -p 9 -m /proc/boot/witness-apps.manifest
+# the long-running Witness processes run as uid 70, not root: a root login cannot read or write their memory
+mkdir -p /data/var/witness
+chown -R 70:70 /data/var/witness
 echo "---> Witness: starting attestation agent (port 7650)"
-START_P(witnessd_t) witnessd
+STARTU_P(witnessd_t,70) witnessd
 echo "---> Witness: starting signed fleet reports (to the host, 10.0.2.2:8650)"
-START_P(witness_report_t) witness-report
+STARTU_P(witness_report_t,70) witness-report
 EOF
 
 echo "witness-image: snippets written to $SNIPPETS"

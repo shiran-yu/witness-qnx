@@ -457,6 +457,7 @@ allow_attach tpm_driver_t {
     /dev/tpm0-stats
 };
 allow tpm_driver_t self:ability {
+    nonroot
     pathspace
     mem_phys:4275306496-4275310591
     prot_exec
@@ -484,10 +485,11 @@ allow user_root_t self:ability {
     signal:0,15,19,25
     pgrp
     map_fixed
-    xprocess_query:20-22,24,29-30,33-34,37-38,43-44,47-48
+    xprocess_query:20-22,24,29-30,33-34,37-38,43-44,47-48,70
     channel_connect:slogger_t,devb_t,pipe_t
 };
 # Witness: no tpm_driver_t above, on purpose. Only measured boot components use the TPM.
+# uid 70 (driver, agent, report app) gets xprocess_query only: no xprocess_mem_read/write, no debug.
 
 # === Rules for type witness_measure_t ============
 allow witness_measure_t self:ability {
@@ -501,6 +503,7 @@ allow_attach witnessd_t {
     /dev/name/local/witness/report
 };
 allow witnessd_t self:ability {
+    nonroot
     fork
     prot_exec
     priority:0-253
@@ -514,6 +517,7 @@ allow witnessd_t self:ability {
 # === Rules for type witness_report_t ============
 # The fleet-report application: the only type that may ask witnessd (its report channel) to sign.
 allow witness_report_t self:ability {
+    nonroot
     fork
     prot_exec
     map_fixed

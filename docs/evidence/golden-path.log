@@ -2,8 +2,8 @@
 ==> creating a UEFI QNX 8.0 image with the Witness layer
 ==> computing reference values from the build output and signing the release
 wrote <repo>/.work/reference.json.policy: release PCR policy signed for PCR 4,5,8,9, release 1 (older releases refused by the TPM)
-wrote <repo>/.work/reference.json: boot=uefi PCR4=6ce4ff96766f… PCR5=e2ed50f8339c… PCR8=9d220a85a96c… PCR9=d18561fd5642…, 254 PCR 8 + 2 PCR 9 expected events, 253 files
-started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -cpu max)
+wrote <repo>/.work/reference.json: boot=uefi PCR4=7ab07f32d196… PCR5=4790870ce2e0… PCR8=630617056f0c… PCR9=d18561fd5642…, 254 PCR 8 + 2 PCR 9 expected events, 253 files
+started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
 ==> waiting for witnessd
 ==> delivering the signed release policy to /data/var/witness/release-policy
 ---> Witness: starting TPM driver
@@ -16,7 +16,7 @@ witnessd: device key locked until a signed release policy is delivered
 witnessd: listening on port 7650
 enrolled 127.0.0.1:10023: <repo>/.work/state/enrolled-127.0.0.1_10023.json
 127.0.0.1:10023  TRUSTED   device key: released (proven by TPM signature)
-  pass  attestation key              AK 440853652aaf657f
+  pass  attestation key              AK 40a3d606c9912f78
   pass  quote signature              ECDSA P-256 over TPMS_ATTEST
   pass  freshness                    quote carries this request's nonce
   pass  PCR values                   PCR 0-9 match the signed digest
@@ -29,7 +29,7 @@ enrolled 127.0.0.1:10023: <repo>/.work/state/enrolled-127.0.0.1_10023.json
   pass  applications (PCR 9)         2 measurement(s) match the release
   pass  device key (signed release + PCR 0,2,7) TPM released the key bound to the released boot state; it signed our nonce
 127.0.0.1:10023  TRUSTED   device key: released (proven by TPM signature)
-  pass  attestation key              AK 440853652aaf657f
+  pass  attestation key              AK 40a3d606c9912f78
   pass  quote signature              ECDSA P-256 over TPMS_ATTEST
   pass  freshness                    quote carries this request's nonce
   pass  PCR values                   PCR 0-9 match the signed digest
@@ -43,9 +43,9 @@ enrolled 127.0.0.1:10023: <repo>/.work/state/enrolled-127.0.0.1_10023.json
   pass  device key (signed release + PCR 0,2,7) TPM released the key bound to the released boot state; it signed our nonce
 ==> attacker enables password logins in /system/etc/ssh/sshd_config
 ==> rebooting
-started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -cpu max)
+started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
 127.0.0.1:10023  NOT TRUSTED   device key: locked (agent’s claim, not verified)
-  pass  attestation key              AK 440853652aaf657f
+  pass  attestation key              AK 40a3d606c9912f78
   pass  quote signature              ECDSA P-256 over TPMS_ATTEST
   pass  freshness                    quote carries this request's nonce
   pass  PCR values                   PCR 0-9 match the signed digest
@@ -61,12 +61,25 @@ started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.lo
                   expected 4e2e95dc5d0f3652…  got 294c7dd0399bfc3a…
 (exit 2)
 ==> restoring the released files
-started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -cpu max)
+started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
+127.0.0.1:10023  TRUSTED   device key: released (proven by TPM signature)
+  pass  attestation key              AK 40a3d606c9912f78
+  pass  quote signature              ECDSA P-256 over TPMS_ATTEST
+  pass  freshness                    quote carries this request's nonce
+  pass  PCR values                   PCR 0-9 match the signed digest
+  pass  boot disk layout (PCR 5)     GPT partition table is the released disk image's
+  pass  firmware (PCR 0,1,2,3,6,7)   same firmware and configuration as at enrollment
+  pass  boot image (PCR 4)           IFS is the released ifs.bin (Authenticode, measured by UEFI firmware)
+  pass  event log (PCR 8)            log replays to the quoted PCR
+  pass  event log (PCR 9)            log replays to the quoted PCR
+  pass  system and /etc (PCR 8)      254 measurement(s) match the release
+  pass  applications (PCR 9)         2 measurement(s) match the release
+  pass  device key (signed release + PCR 0,2,7) TPM released the key bound to the released boot state; it signed our nonce
 ==> attacker plants a modified TPM library that witnessd loads
 ==> rebooting
-started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -cpu max)
+started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
 127.0.0.1:10023  NOT TRUSTED   device key: locked (agent’s claim, not verified)
-  pass  attestation key              AK 440853652aaf657f
+  pass  attestation key              AK 40a3d606c9912f78
   pass  quote signature              ECDSA P-256 over TPMS_ATTEST
   pass  freshness                    quote carries this request's nonce
   pass  PCR values                   PCR 0-9 match the signed digest
@@ -82,12 +95,25 @@ started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.lo
                   expected 80d9b3a872e6fd2a…  got 47e2bd83886f8d92…
 (exit 2)
 ==> restoring the released files
-started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -cpu max)
+started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
+127.0.0.1:10023  TRUSTED   device key: released (proven by TPM signature)
+  pass  attestation key              AK 40a3d606c9912f78
+  pass  quote signature              ECDSA P-256 over TPMS_ATTEST
+  pass  freshness                    quote carries this request's nonce
+  pass  PCR values                   PCR 0-9 match the signed digest
+  pass  boot disk layout (PCR 5)     GPT partition table is the released disk image's
+  pass  firmware (PCR 0,1,2,3,6,7)   same firmware and configuration as at enrollment
+  pass  boot image (PCR 4)           IFS is the released ifs.bin (Authenticode, measured by UEFI firmware)
+  pass  event log (PCR 8)            log replays to the quoted PCR
+  pass  event log (PCR 9)            log replays to the quoted PCR
+  pass  system and /etc (PCR 8)      254 measurement(s) match the release
+  pass  applications (PCR 9)         2 measurement(s) match the release
+  pass  device key (signed release + PCR 0,2,7) TPM released the key bound to the released boot state; it signed our nonce
 ==> attacker swaps the attestation agent binary for a patched copy
 ==> rebooting
-started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -cpu max)
+started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
 127.0.0.1:10023  NOT TRUSTED   device key: locked (agent’s claim, not verified)
-  pass  attestation key              AK 440853652aaf657f
+  pass  attestation key              AK 40a3d606c9912f78
   pass  quote signature              ECDSA P-256 over TPMS_ATTEST
   pass  freshness                    quote carries this request's nonce
   pass  PCR values                   PCR 0-9 match the signed digest
@@ -105,12 +131,25 @@ started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.lo
                   expected e474343c12b04d22…  got d4f2280fee3b0be9…
 (exit 2)
 ==> restoring the released files
-started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -cpu max)
+started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
+127.0.0.1:10023  TRUSTED   device key: released (proven by TPM signature)
+  pass  attestation key              AK 40a3d606c9912f78
+  pass  quote signature              ECDSA P-256 over TPMS_ATTEST
+  pass  freshness                    quote carries this request's nonce
+  pass  PCR values                   PCR 0-9 match the signed digest
+  pass  boot disk layout (PCR 5)     GPT partition table is the released disk image's
+  pass  firmware (PCR 0,1,2,3,6,7)   same firmware and configuration as at enrollment
+  pass  boot image (PCR 4)           IFS is the released ifs.bin (Authenticode, measured by UEFI firmware)
+  pass  event log (PCR 8)            log replays to the quoted PCR
+  pass  event log (PCR 9)            log replays to the quoted PCR
+  pass  system and /etc (PCR 8)      254 measurement(s) match the release
+  pass  applications (PCR 9)         2 measurement(s) match the release
+  pass  device key (signed release + PCR 0,2,7) TPM released the key bound to the released boot state; it signed our nonce
 ==> attacker appends a command to /etc/settings/network, which the boot script runs as root
 ==> rebooting
-started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -cpu max)
+started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
 127.0.0.1:10023  NOT TRUSTED   device key: locked (agent’s claim, not verified)
-  pass  attestation key              AK 440853652aaf657f
+  pass  attestation key              AK 40a3d606c9912f78
   pass  quote signature              ECDSA P-256 over TPMS_ATTEST
   pass  freshness                    quote carries this request's nonce
   pass  PCR values                   PCR 0-9 match the signed digest
@@ -126,7 +165,20 @@ started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.lo
                   expected 0d608d58383efbc0…  got 7e8e416fbe0bfe11…
 (exit 2)
 ==> restoring the released files
-started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -cpu max)
+started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
+127.0.0.1:10023  TRUSTED   device key: released (proven by TPM signature)
+  pass  attestation key              AK 40a3d606c9912f78
+  pass  quote signature              ECDSA P-256 over TPMS_ATTEST
+  pass  freshness                    quote carries this request's nonce
+  pass  PCR values                   PCR 0-9 match the signed digest
+  pass  boot disk layout (PCR 5)     GPT partition table is the released disk image's
+  pass  firmware (PCR 0,1,2,3,6,7)   same firmware and configuration as at enrollment
+  pass  boot image (PCR 4)           IFS is the released ifs.bin (Authenticode, measured by UEFI firmware)
+  pass  event log (PCR 8)            log replays to the quoted PCR
+  pass  event log (PCR 9)            log replays to the quoted PCR
+  pass  system and /etc (PCR 8)      254 measurement(s) match the release
+  pass  applications (PCR 9)         2 measurement(s) match the release
+  pass  device key (signed release + PCR 0,2,7) TPM released the key bound to the released boot state; it signed our nonce
 ==> root on the device tries to extend PCR 8, run its own agent with the agent's type, borrow the measurer's type, have the device key sign a fleet report, and plant a boot hook
 # tpm-raw 80020000004100000182000000080000000940000009000000000000000001000b0000000000000000000000000000000000000000000000000000000000000000
 tpm-raw: open /dev/tpm0: Operation not permitted
@@ -143,30 +195,26 @@ witness-report: no channel to witnessd: Operation not permitted
 # echo touch /tmp/pwned > /boot/onboot
 sh: cannot create /boot/onboot: Read-only file system
   denied
+# exec 3<>/proc/20482/as      (write the memory of dev-tpm-tis)
+sh: cannot create /proc/20482/as: Operation not permitted
+  denied
+# exec 3<>/proc/471060/as      (write the memory of witnessd)
+sh: cannot create /proc/471060/as: Operation not permitted
+  denied
+# exec 3<>/proc/483350/as      (write the memory of witness-report)
+sh: cannot create /proc/483350/as: Operation not permitted
+  denied
 # swap /system/lib/libtss2-esys.so.1, then kill the agent so its supervisor restarts it
-  no effect: restarted agent 974871 is a fork of supervisor 454676 (no exec), mapping the same 11 objects it loaded at the measured launch
-127.0.0.1:10023  TRUSTED   device key: released (proven by TPM signature)
-  pass  attestation key              AK 440853652aaf657f
-  pass  quote signature              ECDSA P-256 over TPMS_ATTEST
-  pass  freshness                    quote carries this request's nonce
-  pass  PCR values                   PCR 0-9 match the signed digest
-  pass  boot disk layout (PCR 5)     GPT partition table is the released disk image's
-  pass  firmware (PCR 0,1,2,3,6,7)   same firmware and configuration as at enrollment
-  pass  boot image (PCR 4)           IFS is the released ifs.bin (Authenticode, measured by UEFI firmware)
-  pass  event log (PCR 8)            log replays to the quoted PCR
-  pass  event log (PCR 9)            log replays to the quoted PCR
-  pass  system and /etc (PCR 8)      254 measurement(s) match the release
-  pass  applications (PCR 9)         2 measurement(s) match the release
-  pass  device key (signed release + PCR 0,2,7) TPM released the key bound to the released boot state; it signed our nonce
+  no effect: restarted agent 1073175 is a fork of supervisor 471060 (no exec), mapping the same 11 objects it loaded at the measured launch
 ==> build host: release v2 hardens sshd (MaxAuthTries 3); reference computed and signed with the release key
 wrote <repo>/.work/reference-v2.json.policy: release PCR policy signed for PCR 4,5,8,9, release 2 (older releases refused by the TPM)
-wrote <repo>/.work/reference-v2.json: boot=uefi PCR4=6ce4ff96766f… PCR5=e2ed50f8339c… PCR8=25fc90f80ded… PCR9=d18561fd5642…, 254 PCR 8 + 2 PCR 9 expected events, 253 files
+wrote <repo>/.work/reference-v2.json: boot=uefi PCR4=7ab07f32d196… PCR5=4790870ce2e0… PCR8=66d169012424… PCR9=d18561fd5642…, 254 PCR 8 + 2 PCR 9 expected events, 253 files
 ==> device: the update agent installs the file and the signed v2 policy, then reboots
 ==> delivering the signed release policy to /data/var/witness/release-policy
-started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -cpu max)
+started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
 witnessd: release 2 recorded: older releases can no longer use the device key
 127.0.0.1:10023  TRUSTED   device key: released (proven by TPM signature)
-  pass  attestation key              AK 440853652aaf657f
+  pass  attestation key              AK 40a3d606c9912f78
   pass  quote signature              ECDSA P-256 over TPMS_ATTEST
   pass  freshness                    quote carries this request's nonce
   pass  PCR values                   PCR 0-9 match the signed digest
@@ -180,10 +228,10 @@ witnessd: release 2 recorded: older releases can no longer use the device key
   pass  device key (signed release + PCR 0,2,7) TPM released the key bound to the released boot state; it signed our nonce
 ==> attacker reinstalls release v1 (the old sshd_config) and its genuine signed policy
 ==> rebooting
-started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -cpu max)
+started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
 ==> checked against release v1's own reference: every measurement matches v1, and the TPM still refuses the key
 127.0.0.1:10023  NOT TRUSTED   device key: locked (agent’s claim, not verified)
-  pass  attestation key              AK 440853652aaf657f
+  pass  attestation key              AK 40a3d606c9912f78
   pass  quote signature              ECDSA P-256 over TPMS_ATTEST
   pass  freshness                    quote carries this request's nonce
   pass  PCR values                   PCR 0-9 match the signed digest
@@ -197,27 +245,11 @@ started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.lo
   FAIL  device key (signed release + PCR 0,2,7) TPM refused to release the device key: tpm:error(2.0): policy failure in math operation or an invalid authPolicy value
 witnessd: device key LOCKED: boot state differs from the signed release (tpm:error(2.0): policy failure in math operation or an invalid authPolicy value)
 witnessd: listening on port 7650
-127.0.0.1:10023  NOT TRUSTED   device key: locked (agent’s claim, not verified)
-  pass  attestation key              AK 440853652aaf657f
-  pass  quote signature              ECDSA P-256 over TPMS_ATTEST
-  pass  freshness                    quote carries this request's nonce
-  pass  PCR values                   PCR 0-9 match the signed digest
-  pass  boot disk layout (PCR 5)     GPT partition table is the released disk image's
-  pass  firmware (PCR 0,1,2,3,6,7)   same firmware and configuration as at enrollment
-  pass  boot image (PCR 4)           IFS is the released ifs.bin (Authenticode, measured by UEFI firmware)
-  pass  event log (PCR 8)            log replays to the quoted PCR
-  pass  event log (PCR 9)            log replays to the quoted PCR
-  FAIL  system and /etc (PCR 8)      1 difference(s) from the release
-  pass  applications (PCR 9)         2 measurement(s) match the release
-  FAIL  device key (signed release + PCR 0,2,7) TPM refused to release the device key: tpm:error(2.0): policy failure in math operation or an invalid authPolicy value
-       CHANGED  PCR 8  /system/etc/ssh/sshd_config
-                  expected 7c78a5ce42baa2c7…  got 4e2e95dc5d0f3652…  = release 1's version (rollback)
-(exit 2)
 ==> restoring the released files
 ==> delivering the signed release policy to /data/var/witness/release-policy
-started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -cpu max)
+started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
 127.0.0.1:10023  TRUSTED   device key: released (proven by TPM signature)
-  pass  attestation key              AK 440853652aaf657f
+  pass  attestation key              AK 40a3d606c9912f78
   pass  quote signature              ECDSA P-256 over TPMS_ATTEST
   pass  freshness                    quote carries this request's nonce
   pass  PCR values                   PCR 0-9 match the signed digest
