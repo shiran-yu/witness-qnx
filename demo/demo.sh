@@ -8,7 +8,9 @@
 #   demo.sh verify     challenge the device and appraise its boot against the release
 #   demo.sh tamper [config|app|lib|data]  modify the device the way an attacker would, then reboot
 #   demo.sh restore    undo the tamper, reboot
-#   demo.sh update     signed release v2 (one hardened file) installed over the air; the device keeps its key
+#   demo.sh update     signed release v2 (one hardened file), installed as an update agent would (here over ssh);
+#                      the device keeps its key
+#   demo.sh rollback   reinstall release v1 and its genuine signed policy (the verifier refuses it)
 #   demo.sh down       power off
 #   demo.sh attack     as root on the device, try to use the TPM directly (denied by the security policy)
 # Env: WORK (default src/.work), SSH_PORT (10022; attestation on SSH_PORT+1), SECPOL (secure|no)
@@ -59,6 +61,7 @@ case "${1:-}" in
 build)
     command -v mkqnximage >/dev/null || { echo "source qnxsdp-env.sh first" >&2; exit 1; }
     mkdir -p "$WORK"
+    rm -f "$WORK/reference-v1.json" "$WORK/reference-v1.json.policy"  # a fresh build is release v1 again
     [ -f "$KEY" ] || ssh-keygen -q -t ed25519 -N "" -f "$KEY"
     say "cross-building Witness for QNX 8.0 x86_64"
     make -C "$SRC" -s
@@ -131,9 +134,11 @@ restore)
     ;;
 update)
     # release v2 = the released build plus one hardened file; the device keeps its key (no re-provisioning)
+    [ ! -f "$WORK/reference-v1.json" ] || { echo "already at release v2; demo.sh build starts again from v1" >&2; exit 1; }
     say "build host: release v2 hardens sshd (MaxAuthTries 3); reference computed and signed with the release key"
-    mkdir -p "$WORK/release-v2"
-    "${SSH[@]}" 'cat /system/etc/ssh/sshd_config' > "$WORK/release-v2/sshd_config"
+    mkdir -p "$WORK/release-v1" "$WORK/release-v2"
+    "${SSH[@]}" 'cat /system/etc/ssh/sshd_config' > "$WORK/release-v1/sshd_config"
+    cp "$WORK/release-v1/sshd_config" "$WORK/release-v2/sshd_config"
     python3 -c 'import hashlib,json,sys; r=json.load(open(sys.argv[1]))["files"]["/system/etc/ssh/sshd_config"]
 sys.exit(hashlib.sha256(open(sys.argv[2],"rb").read()).hexdigest() != r)' "$WORK/reference.json" "$WORK/release-v2/sshd_config" \
         || { echo "sshd_config on the device is not the released one; restore first" >&2; exit 1; }
@@ -146,6 +151,16 @@ sys.exit(hashlib.sha256(open(sys.argv[2],"rb").read()).hexdigest() != r)' "$WORK
     "${SSH[@]}" 'cat > /system/etc/ssh/.sshd_config.new && mv /system/etc/ssh/.sshd_config.new /system/etc/ssh/sshd_config' \
         < "$WORK/release-v2/sshd_config"
     push_release_policy
+    reboot_device
+    ;;
+rollback)
+    # v1 was signed too, so the TPM releases the key; the verifier refuses it because v2 is current
+    [ -f "$WORK/reference-v1.json" ] || { echo "rollback needs demo.sh update first" >&2; exit 1; }
+    say "attacker reinstalls release v1 (the old sshd_config) and its genuine signed policy"
+    "${SSH[@]}" 'cat > /system/etc/ssh/.sshd_config.new && mv /system/etc/ssh/.sshd_config.new /system/etc/ssh/sshd_config' \
+        < "$WORK/release-v1/sshd_config"
+    "${SSH[@]}" 'cat > /data/var/witness/release-policy' < "$WORK/reference-v1.json.policy"
+    say "rebooting"
     reboot_device
     ;;
 attack)
@@ -162,7 +177,7 @@ down)
     (cd "$IMAGE" && "$SRC/scripts/vm.sh" stop)
     ;;
 *)
-    sed -n '3,15p' "$0"
+    sed -n '3,16p' "$0"
     exit 2
     ;;
 esac

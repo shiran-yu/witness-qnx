@@ -43,6 +43,7 @@
 #define DEFAULT_PORT 7650
 #define QUOTE_PCR_MASK 0x0003FF /* PCR 0-9 */
 #define SEAL_PCR_MASK 0x0003B5  /* PCR 0,2,4,5,7 (firmware, boot image, disk, Secure Boot), 8 (system), 9 (apps) */
+#define FIRMWARE_PCR_MASK 0x000085 /* PCR 0,2,7: bound per device after PolicyAuthorize (not in the signed policy) */
 #define DEVICE_KEY_LABEL "witness:device-key:"
 #define WATCHDOG_SECONDS 10 /* longest the TPM work and reply of one request may take */
 #define REQUEST_BUDGET_MS 2000 /* a client must send its request line within this */
@@ -241,28 +242,13 @@ static TSS2_RC load_release_key(const struct release *release, ESYS_TR *key, TPM
     return rc;
 }
 
-/* authPolicy = H(H(0^32 || TPM_CC_PolicyAuthorize || keyName) || policyRef), policyRef empty */
-static TSS2_RC authorize_policy_digest(const TPM2B_NAME *name, TPM2B_DIGEST **policy)
+/* PolicyPCR over `mask` with the PCRs as they are now */
+static TSS2_RC policy_pcr(ESYS_TR session, uint32_t mask)
 {
-    TPM2B_MAX_BUFFER buffer = {.size = (UINT16)(32 + 4 + name->size)};
-    TPM2B_DIGEST *first = NULL;
-    TPMT_TK_HASHCHECK *ticket = NULL;
-    memset(buffer.buffer, 0, 32);
-    buffer.buffer[32] = 0x00, buffer.buffer[33] = 0x00, buffer.buffer[34] = 0x01, buffer.buffer[35] = 0x6A;
-    memcpy(buffer.buffer + 36, name->name, name->size);
-    TSS2_RC rc = Esys_Hash(esys, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, &buffer, TPM2_ALG_SHA256, ESYS_TR_RH_NULL,
-                           &first, &ticket);
-    Esys_Free(ticket);
-    ticket = NULL;
-    if (rc != TSS2_RC_SUCCESS)
-        return rc;
-    buffer.size = first->size;
-    memcpy(buffer.buffer, first->buffer, first->size);
-    Esys_Free(first);
-    rc = Esys_Hash(esys, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, &buffer, TPM2_ALG_SHA256, ESYS_TR_RH_NULL, policy,
-                   &ticket);
-    Esys_Free(ticket);
-    return rc;
+    TPM2B_DIGEST current_values = {0};
+    TPML_PCR_SELECTION selection;
+    selection_from_mask(&selection, mask);
+    return Esys_PolicyPCR(esys, session, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, &current_values, &selection);
 }
 
 /* In a policy session already past PolicyPCR: have the TPM check the release signature, then PolicyAuthorize. */
@@ -321,7 +307,23 @@ static TSS2_RC create_device_key(ESYS_TR storage_key, const char *blob_path)
         if (rc != TSS2_RC_SUCCESS)
             return rc;
         Esys_FlushContext(esys, key);
-        rc = authorize_policy_digest(name, &policy);
+        /* trial: PolicyAuthorize(release key), then PolicyPCR over this device's firmware PCRs as they are now
+         * (a trial session does not check the approved policy or the ticket) */
+        TPMT_SYM_DEF symmetric = {.algorithm = TPM2_ALG_NULL};
+        rc = Esys_StartAuthSession(esys, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, NULL,
+                                   TPM2_SE_TRIAL, &symmetric, TPM2_ALG_SHA256, &trial);
+        if (rc == TSS2_RC_SUCCESS) {
+            TPM2B_DIGEST approved = {.size = 32};
+            TPM2B_NONCE policy_ref = {0};
+            TPMT_TK_VERIFIED no_ticket = {.tag = TPM2_ST_VERIFIED, .hierarchy = TPM2_RH_NULL};
+            rc = Esys_PolicyAuthorize(esys, trial, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, &approved, &policy_ref,
+                                      name, &no_ticket);
+            if (rc == TSS2_RC_SUCCESS)
+                rc = policy_pcr(trial, FIRMWARE_PCR_MASK);
+            if (rc == TSS2_RC_SUCCESS)
+                rc = Esys_PolicyGetDigest(esys, trial, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, &policy);
+            Esys_FlushContext(esys, trial);
+        }
         Esys_Free(name);
     } else {
         rc = pcr_policy_session(TPM2_SE_TRIAL, SEAL_PCR_MASK, &trial);
@@ -397,8 +399,13 @@ static TSS2_RC device_key_sign(const uint8_t *data, size_t size, TPMT_SIGNATURE 
         return TSS2_ESYS_RC_BAD_VALUE; /* no signed policy for this release: the key stays locked */
     }
     rc = pcr_policy_session(TPM2_SE_POLICY, release.have_key ? release.pcr_mask : SEAL_PCR_MASK, &session);
-    if (rc == TSS2_RC_SUCCESS && release.have_key && (rc = authorize_release(session, &release)) != TSS2_RC_SUCCESS)
-        Esys_FlushContext(esys, session);
+    if (rc == TSS2_RC_SUCCESS && release.have_key) {
+        rc = authorize_release(session, &release);
+        if (rc == TSS2_RC_SUCCESS) /* then this device's enrolled firmware state */
+            rc = policy_pcr(session, FIRMWARE_PCR_MASK);
+        if (rc != TSS2_RC_SUCCESS)
+            Esys_FlushContext(esys, session);
+    }
     if (rc == TSS2_RC_SUCCESS) {
         TPMT_SIG_SCHEME scheme = {.scheme = TPM2_ALG_NULL}; /* the key's own ECDSA-SHA256 */
         rc = Esys_Sign(esys, device_key, session, ESYS_TR_NONE, ESYS_TR_NONE, digest, &scheme, ticket, signature);

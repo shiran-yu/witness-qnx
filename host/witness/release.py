@@ -9,7 +9,8 @@ from cryptography.hazmat.primitives.asymmetric import ec, utils
 
 from .tpm import ecc_public_area, object_name, pcr_policy_digest, policy_authorize_digest
 
-RELEASE_PCRS = (4, 5, 8, 9)  # predicted from the build; firmware PCRs are checked by the verifier, not the key
+RELEASE_PCRS = (4, 5, 8, 9)  # predicted from the build: signed per release
+FIRMWARE_KEY_PCRS = (0, 2, 7)  # bound per device after PolicyAuthorize (witnessd FIRMWARE_PCR_MASK)
 
 
 def make_release_key(path: str) -> None:

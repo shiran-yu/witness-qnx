@@ -175,7 +175,7 @@ def _check_device_key(verdict: Verdict, attestation: dict, nonce: bytes, referen
     proves the TPM released it now. Its authPolicy must be exactly that policy, computed here from the release
     (PCR 4, 5, 8, 9) and the enrolled firmware (PCR 0, 2, 7), so a key re-provisioned on a tampered boot fails."""
     release = reference.get("release")
-    name = ("device key (signed release, PCR 4,5,8,9)" if release
+    name = ("device key (signed release + PCR 0,2,7)" if release
             else f"device key (PCR {','.join(map(str, DEVICE_KEY_PCRS))})")
     device_key = attestation.get("device_key")
     if not isinstance(device_key, dict):
@@ -187,11 +187,15 @@ def _check_device_key(verdict: Verdict, attestation: dict, nonce: bytes, referen
     firmware = enrollment["firmware_pcrs"] if enrollment else {str(i): pcrs[i].hex() for i in FIRMWARE_PCRS}
     released = {i: bytes.fromhex(reference["pcr"][str(i)] if str(i) in reference["pcr"] else firmware[str(i)])
                 for i in DEVICE_KEY_PCRS}
-    if release:  # PolicyAuthorize(release key): usable by any signed release; this one must be signed for these PCRs
-        from .release import RELEASE_PCRS, device_key_policy
-        policy = device_key_policy(bytes.fromhex(release["release_x"]), bytes.fromhex(release["release_y"]))
-        signed_for_this_release = release["approved_policy"] == pcr_policy_digest(
-            {i: bytes.fromhex(reference["pcr"][str(i)]) for i in RELEASE_PCRS}).hex()
+    if release:  # PolicyAuthorize(release key) then PolicyPCR over this device's enrolled firmware PCR 0, 2, 7
+        from .release import FIRMWARE_KEY_PCRS, RELEASE_PCRS, device_key_policy
+        policy = pcr_policy_digest({i: bytes.fromhex(firmware[str(i)]) for i in FIRMWARE_KEY_PCRS},
+                                   device_key_policy(bytes.fromhex(release["release_x"]), bytes.fromhex(release["release_y"])))
+        # the key works under any signed release: the one this device booted must be the current one
+        approved = release["approved_policy"]
+        signed_for_this_release = approved == pcr_policy_digest(
+            {i: bytes.fromhex(reference["pcr"][str(i)]) for i in RELEASE_PCRS}).hex() \
+            and approved == pcr_policy_digest({i: pcrs[i] for i in RELEASE_PCRS}).hex()
     else:
         policy, signed_for_this_release = pcr_policy_digest(released), True
     bound = key.auth_policy == policy and signed_for_this_release and key.attributes & TPMA_OBJECT_FIXEDTPM \
@@ -204,12 +208,16 @@ def _check_device_key(verdict: Verdict, attestation: dict, nonce: bytes, referen
         parse_public(bytes.fromhex(attestation["ak_public"])), certify, bytes.fromhex(device_key["certify_signature"]))
     ok = bool(bound and enrolled and signed and certified)
     verdict.checks.append(Check(name, ok, "TPM released the key bound to the released boot state; it signed our nonce"
-                                if ok else "key is not bound to the released state" if not bound
+                                if ok else "device booted another signed release, not the current one"
+                                if not signed_for_this_release
+                                else "key is not bound to the released state" if not bound
                                 else "key differs from the enrolled one: re-provisioned" if not enrolled
                                 else "key is not certified by this device's attestation key" if not certified
                                 else "signature over our nonce is invalid"))
-    verdict.sealed = "unsealed" if ok else "locked"
-    verdict.sealed_proven = ok  # only a passing check proves anything
+    # an older signed release gets the key from the TPM; say so rather than "locked"
+    rolled_back = signed and certified and enrolled and not signed_for_this_release
+    verdict.sealed = "unsealed" if ok else "released to an old release" if rolled_back else "locked"
+    verdict.sealed_proven = ok or bool(rolled_back)  # proven by the key's own signature and the AK's certify
 
 
 def enrollment_from(attestation: dict) -> dict:

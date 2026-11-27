@@ -130,12 +130,12 @@ def policy_authorize_digest(key_name: bytes, policy_ref: bytes = b"") -> bytes:
     return hashlib.sha256(digest + policy_ref).digest()
 
 
-def pcr_policy_digest(values: dict[int, bytes]) -> bytes:
-    """The authPolicy of an object whose only authorisation is TPM2_PolicyPCR over these SHA-256 PCR values."""
+def pcr_policy_digest(values: dict[int, bytes], previous: bytes = bytes(32)) -> bytes:
+    """Policy digest after TPM2_PolicyPCR over these SHA-256 PCR values (from `previous`, default a fresh session)."""
     mask = sum(1 << i for i in values)
     selection = struct.pack(">IHB", 1, TPM_ALG_SHA256, 3) + mask.to_bytes(3, "little")
     pcr_digest = hashlib.sha256(b"".join(values[i] for i in sorted(values))).digest()
-    return hashlib.sha256(bytes(32) + struct.pack(">I", TPM_CC_POLICY_PCR) + selection + pcr_digest).digest()
+    return hashlib.sha256(previous + struct.pack(">I", TPM_CC_POLICY_PCR) + selection + pcr_digest).digest()
 
 
 @dataclass
