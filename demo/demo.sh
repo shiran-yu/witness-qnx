@@ -6,7 +6,7 @@
 #   demo.sh up         boot it headless with a software TPM (swtpm) on the TIS interface
 #   demo.sh enroll     record the device's attestation key and firmware baseline (known-good boot)
 #   demo.sh verify     challenge the device and appraise its boot against the release
-#   demo.sh tamper [config|app]   modify the device the way an attacker would, then reboot
+#   demo.sh tamper [config|app|lib]  modify the device the way an attacker would, then reboot
 #   demo.sh restore    undo the tamper, reboot
 #   demo.sh down       power off
 #   demo.sh attack     as root on the device, try to use the TPM directly (denied by the security policy)
@@ -93,14 +93,20 @@ tamper)
                      cp /system/bin/witnessd /system/bin/.witnessd.new && echo "# patched" >> /system/bin/.witnessd.new &&
                      mv /system/bin/.witnessd.new /system/bin/witnessd'
         ;;
-    *) echo "tamper: config|app" >&2; exit 2 ;;
+    lib)
+        say "attacker plants a modified TPM library that witnessd and tabrm load"
+        "${SSH[@]}" 'cp -n /system/lib/libtss2-rc.so.1 /data/var/witness/libtss2-rc.so.1.orig 2>/dev/null || true;
+                     cp /system/lib/libtss2-rc.so.1 /system/lib/.rc.new && echo "# patched" >> /system/lib/.rc.new &&
+                     mv /system/lib/.rc.new /system/lib/libtss2-rc.so.1'
+        ;;
+    *) echo "tamper: config|app|lib" >&2; exit 2 ;;
     esac
     say "rebooting"
     reboot_device
     ;;
 restore)
     say "restoring the released files"
-    "${SSH[@]}" 'for f in sshd_config:/system/etc/ssh/sshd_config witnessd:/system/bin/witnessd; do
+    "${SSH[@]}" 'for f in sshd_config:/system/etc/ssh/sshd_config witnessd:/system/bin/witnessd libtss2-rc.so.1:/system/lib/libtss2-rc.so.1; do
                      o=/data/var/witness/${f%%:*}.orig; t=${f#*:};
                      [ -f $o ] && cp $o $t.restore && mv $t.restore $t && rm $o; done; true'
     reboot_device

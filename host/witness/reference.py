@@ -29,12 +29,14 @@ def _manifest_path(ifs_build: str, name: str) -> str | None:
     return None
 
 
-def _expected_events(manifest: list[str], files: dict[str, str], marker: str | None) -> tuple[list[dict], str]:
+def _expected_events(manifest: list[str], files: dict[str, str], marker: str | None,
+                     links: set[str] = frozenset()) -> tuple[list[dict], str]:
     """The events witness-measure will log for a manifest, and the PCR value they produce."""
     events, pcr = [], bytes(32)
     for path in manifest:
         digest = files.get(path, MISSING_DIGEST)
-        events.append({"type": "file" if path in files else "missing", "path": path, "sha256": digest})
+        kind = "link" if path in links else "file" if path in files else "missing"
+        events.append({"type": kind, "path": path, "sha256": digest})
         pcr = extend(pcr, bytes.fromhex(digest))
     if marker:
         digest = hashlib.sha256(marker.encode()).hexdigest()
@@ -74,14 +76,15 @@ def build_reference(image_dir: str) -> dict:
         if os.path.exists(os.path.join(build, "boot_part.build")) else False
 
     ifs_build = os.path.join(build, "ifs.build")
-    files = file_digests(os.path.join(build, "system.build"), image_dir, "/system")
-    system_manifest = _manifest_path(ifs_build, "witness.manifest")
-    if system_manifest is None:
-        raise ValueError(f"{ifs_build} has no witness.manifest: run src/image/witness-image.sh on this image")
+    links: set[str] = set()
+    files = file_digests(os.path.join(build, "system.build"), image_dir, "/system", links)
+    if _manifest_path(ifs_build, "witness-measure") is None:
+        raise ValueError(f"{ifs_build} has no witness-measure: run src/image/witness-image.sh on this image")
     apps_manifest = _manifest_path(ifs_build, "witness-apps.manifest")
 
+    # PCR 8: witness-measure -r /system, every file and symlink in strcmp order of the path, then the marker
     events, pcr = {}, {}
-    events["8"], pcr["8"] = _expected_events(read_manifest(system_manifest), files, SYSTEM_MARKER)
+    events["8"], pcr["8"] = _expected_events(sorted(files, key=str.encode), files, SYSTEM_MARKER, links)
     events["9"], pcr["9"] = _expected_events(read_manifest(apps_manifest) if apps_manifest else [], files, None)
 
     reference = {

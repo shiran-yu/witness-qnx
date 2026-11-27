@@ -2,15 +2,18 @@
 /* witness-measure: measure files into a TPM PCR before they are used, and log each event.
  *
  *   witness-measure -p 8 [-t type] [-l log] [-d /dev/tpm0] file...
- *   witness-measure -p 8 -m manifest      (one path per line, '#' comments)
+ *   witness-measure -p 8 -r /system        (every file and symlink under a directory, sorted by path)
+ *   witness-measure -p 9 -m manifest      (one path per line, '#' comments)
  *   witness-measure -p 9 -s "text"         (measure a string, e.g. a boot phase marker)
  *
  * Each event: PCR[p] = SHA256(PCR[p] || SHA256(data)), and one log line
  *   <pcr> <sha256-hex> <type> <path-or-text>
  * The log lets a verifier replay the PCR and name the exact file that changed.
  * Depends only on libc so it can run from the IFS before the system partition is trusted. */
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -149,18 +152,93 @@ static int measure_manifest(unsigned pcr, const char *type, const char *manifest
     return failures ? -1 : 0;
 }
 
+struct path_list {
+    char **paths;
+    size_t count, capacity;
+};
+
+static int collect_tree(const char *dir, struct path_list *list)
+{
+    DIR *d = opendir(dir);
+    if (!d) {
+        fprintf(stderr, "witness-measure: %s: %s\n", dir, strerror(errno));
+        return -1;
+    }
+    int failures = 0;
+    struct dirent *entry;
+    while ((entry = readdir(d))) {
+        if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
+            continue;
+        char path[PATH_MAX];
+        if (snprintf(path, sizeof path, "%s/%s", dir, entry->d_name) >= (int)sizeof path) {
+            failures++;
+            continue;
+        }
+        struct stat st;
+        if (lstat(path, &st)) {
+            failures++;
+            continue;
+        }
+        if (S_ISDIR(st.st_mode)) {
+            failures += collect_tree(path, list) ? 1 : 0;
+        } else if (S_ISREG(st.st_mode) || S_ISLNK(st.st_mode)) {
+            if (list->count == list->capacity) {
+                list->capacity = list->capacity ? list->capacity * 2 : 256;
+                char **grown = realloc(list->paths, list->capacity * sizeof *grown);
+                if (!grown)
+                    break;
+                list->paths = grown;
+            }
+            if (!(list->paths[list->count] = strdup(path)))
+                break;
+            list->count++;
+        }
+    }
+    closedir(d);
+    return failures ? -1 : 0;
+}
+
+static int compare_paths(const void *a, const void *b) { return strcmp(*(char *const *)a, *(char *const *)b); }
+
+/* Every regular file and symlink under root, in strcmp order of the full path, so a verifier can predict the
+ * sequence from the build. Symlinks are measured by target: SHA256("witness:link:" target). */
+static int measure_tree(unsigned pcr, const char *root)
+{
+    struct path_list list = {0};
+    int failures = collect_tree(root, &list) ? 1 : 0;
+    qsort(list.paths, list.count, sizeof *list.paths, compare_paths);
+    for (size_t i = 0; i < list.count; i++) {
+        char *path = list.paths[i];
+        char target[PATH_MAX + 16] = "witness:link:";
+        ssize_t n = readlink(path, target + 13, PATH_MAX);
+        for (char *c = path; *c; c++)
+            if ((unsigned char)*c < 0x20)
+                *c = '?'; /* a newline in a name must not forge an extra log line */
+        if (n >= 0) {
+            uint8_t digest[SHA256_LEN];
+            sha256(target, 13 + (size_t)n, digest);
+            failures += measure_digest(pcr, digest, "link", path) ? 1 : 0;
+        } else {
+            failures += measure_file(pcr, "file", path) < 0 ? 1 : 0;
+        }
+        free(path);
+    }
+    free(list.paths);
+    return failures ? -1 : 0;
+}
+
 static void usage(void)
 {
-    fprintf(stderr, "usage: witness-measure -p pcr [-t type] [-l log] [-d device] (-m manifest | -s text | file...)\n");
+    fprintf(stderr, "usage: witness-measure -p pcr [-t type] [-l log] [-d device] (-r dir | -m manifest | -s text | file...)\n");
     exit(2);
 }
 
 int main(int argc, char **argv)
 {
     int pcr = -1, opt, rc = 0;
-    const char *type = "file", *manifest = NULL, *text = NULL;
+    const char *type = "file", *manifest = NULL, *text = NULL, *tree = NULL;
 
-    while ((opt = getopt(argc, argv, "p:t:l:d:m:s:")) != -1) {
+    while ((opt = getopt(argc, argv, "p:t:l:d:m:s:r:")) != -1) {
         switch (opt) {
         case 'p': pcr = atoi(optarg); break;
         case 't': type = optarg; break;
@@ -168,12 +246,15 @@ int main(int argc, char **argv)
         case 'd': device_path = optarg; break;
         case 'm': manifest = optarg; break;
         case 's': text = optarg; break;
+        case 'r': tree = optarg; break;
         default: usage();
         }
     }
-    if (pcr < 0 || pcr > 23 || (!manifest && !text && optind >= argc))
+    if (pcr < 0 || pcr > 23 || (!manifest && !text && !tree && optind >= argc))
         usage();
 
+    if (tree)
+        rc |= measure_tree((unsigned)pcr, tree) ? 1 : 0;
     if (text) {
         uint8_t digest[SHA256_LEN];
         sha256(text, strlen(text), digest);

@@ -46,8 +46,11 @@ etc/also_missing=nowhere/file
 etc/after=motd.txt
 """.encode())
 
-    digests = file_digests(str(buildfile), str(image))
+    links = set()
+    digests = file_digests(str(buildfile), str(image), links=links)
+    assert links == {"/system/bin/sh"}
     assert digests == {
+        "/system/bin/sh": sha(b"witness:link:/proc/boot/ksh"),
         "/system/bin/sshd": sha(b"sshd from first search dir"),
         "/system/lib/libc.so": sha(b"libc from absolute search dir"),
         "/system/bin/tool": sha(b"tool"),
@@ -65,6 +68,18 @@ def test_mount_point_and_later_search_line(tmp_path):
     write(image / "b/x", b"from b")
     buildfile = write(tmp_path / "data.build", b"[search=a]\nx\n[search=b]\ny=x\n")
     assert file_digests(str(buildfile), str(image), "/data") == {"/data/x": sha(b"from a"), "/data/y": sha(b"from b")}
+
+
+def test_hard_link_gets_its_target_digest(tmp_path):
+    write(tmp_path / "usr/bin/toybox", b"toybox")
+    buildfile = write(tmp_path / "s.build", b"bin/toybox=usr/bin/toybox\n[type=hlink] bin/cp=toybox\n")
+    assert file_digests(str(buildfile), str(tmp_path)) == {"/system/bin/toybox": sha(b"toybox"),
+                                                            "/system/bin/cp": sha(b"toybox")}
+
+
+def test_inline_backslash_escapes(tmp_path):
+    buildfile = write(tmp_path / "s.build", b"etc/x={\nsed 's/a\\\\.b/\\\\1/'\nbrace \\}\n}\n")
+    assert file_digests(str(buildfile), str(tmp_path)) == {"/system/etc/x": sha(b"sed 's/a\\.b/\\1/'\nbrace }\n")}
 
 
 def test_empty_inline_block(tmp_path):

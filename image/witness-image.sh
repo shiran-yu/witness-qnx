@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
 # Add the Witness layer to a mkqnximage image directory, through mkqnximage's own snippet mechanism:
-#   IFS:       dev-tpm-tis, witness-measure, the measurement manifest (all covered by the firmware's PCR 4)
-#   boot:      driver started in the IFS script; system partition measured into PCR 8 right after mount
+#   IFS:       dev-tpm-tis, witness-measure, the application manifest (all covered by the firmware's PCR 4)
+#   boot:      driver started in the IFS script; every file and symlink on /system measured into PCR 8 right after mount
 #   system:    QNX TCG stack (tss2, tabrm, tpm2-tools), libtss2-tcti-witness, tabrm config, witnessd
 #   post-start tabrm on /dev/tpmrm0 over our TCTI; application layer measured into PCR 9; witnessd
 # Usage: witness-image.sh <image-dir>   then: (cd <image-dir> && mkqnximage --build)
@@ -29,7 +29,6 @@ cat > "$SNIPPETS/ifs_files.witness" <<EOF
 #############################################
 [perms=0555] dev-tpm-tis=$BUILD/dev-tpm-tis
 [perms=0555] witness-measure=$BUILD/witness-measure
-[perms=0444] witness.manifest=$HERE/witness.manifest
 [perms=0444] witness-apps.manifest=$HERE/witness-apps.manifest
 EOF
 
@@ -43,7 +42,7 @@ EOF
 # 4. startup.sh right after the file systems are mounted: measure before use
 cat > "$SNIPPETS/startup_postfs.witness" <<'EOF'
 echo "---> Witness: measuring system partition into PCR 8"
-START_P(witness_measure_t) /proc/boot/witness-measure -p 8 -m /proc/boot/witness.manifest
+START_P(witness_measure_t) /proc/boot/witness-measure -p 8 -r /system
 START_P(witness_measure_t) /proc/boot/witness-measure -p 8 -t marker -s "witness:system-measured"
 EOF
 

@@ -8,8 +8,10 @@ Witness gives a QNX 8.0 target a TPM 2.0 root of trust and lets a remote verifie
 signature from the TPM, three questions:
 
 1. **Is this the image we released?** UEFI firmware measures the QNX IFS (boot image) into PCR 4.
-2. **Are the system files the released ones?** Witness measures the system partition into PCR 8 right
-   after it is mounted, before anything on it runs, and the applications into PCR 9 before launch.
+2. **Are the system files the released ones?** Witness measures every file and symlink on the system
+   partition (256 on the demo image) into PCR 8 right after it is mounted, before anything on it runs,
+   and the applications into PCR 9 before launch. The verifier predicts all of them from the build
+   output.
 3. **If not, what changed?** The verifier replays the event log and names the file:
    `CHANGED PCR 8 /system/etc/ssh/sshd_config`.
 
@@ -73,7 +75,7 @@ demo/demo.sh down
   pass  boot image (PCR 4)           IFS is the released ifs.bin (Authenticode, measured by UEFI firmware)
   pass  event log (PCR 8)            log replays to the quoted PCR
   pass  event log (PCR 9)            log replays to the quoted PCR
-  pass  system partition (PCR 8)     14 measurement(s) match the release
+  pass  system partition (PCR 8)     256 measurement(s) match the release
   pass  applications (PCR 9)         1 measurement(s) match the release
 ```
 
@@ -97,7 +99,9 @@ After `tamper config` and a reboot:
                   expected 4e2e95dc5d0f3652…  got 294c7dd0399bfc3a…
 ```
 
-After `tamper app` (the attestation agent binary replaced): `CHANGED PCR 9 /system/bin/witnessd`.
+After `tamper lib` (a modified `libtss2-rc.so.1`, loaded by `witnessd` and `tabrm`):
+`CHANGED PCR 8 /system/lib/libtss2-rc.so.1`, device secret locked. After `tamper app` (the attestation
+agent binary replaced): `/system/bin/witnessd` changed in PCR 8 and in PCR 9.
 
 ### Fleet dashboard
 
@@ -121,7 +125,7 @@ stack protector, `_FORTIFY_SOURCE`).
 | TPM TIS driver | [driver/tis.c](driver/tis.c) `tis_open`, `wait_sts`, `tis_transmit` | `mmap_device_memory` (TIS registers at 0xFED40000, `PROT_NOCACHE`); `InterruptAttachThread` + `InterruptWait` with `_NTO_INTR_WAIT_FLAGS_UNMASK`, bounded by `TimerTimeout(_NTO_TIMEOUT_INTR)`; polling fallback if the interrupt self-test gets no wake-up |
 | Resource manager | [driver/main.c](driver/main.c) `io_write`, `io_read`, `io_notify`, `io_read_stats`, `main` | `dispatch_create`, two `resmgr_attach` paths (`/dev/tpm0`, `/dev/tpm0-stats`), custom OCB (`IOFUNC_OCB_T`, `iofunc_mount_t` ocb calloc/free) holding each client's response, `iofunc_notify` for `select`/`poll`, `procmgr_daemon` |
 | TSS2 TCTI | [tcti/tcti-witness.c](tcti/tcti-witness.c) `Tss2_Tcti_Witness_Init`, `Tss2_Tcti_Info` | standard TCTI v2 module that the QNX TCG resource manager `tabrm` loads from its config ([image/tabrm.cfg](image/tabrm.cfg)) |
-| Measurement | [tools/witness-measure.c](tools/witness-measure.c) `pcr_extend`, `measure_manifest` | runs from the IFS (`/proc/boot`), raw `TPM2_PCR_Extend` through `/dev/tpm0`, event log in `/dev/shmem` |
+| Measurement | [tools/witness-measure.c](tools/witness-measure.c) `pcr_extend`, `measure_tree`, `measure_manifest` | runs from the IFS (`/proc/boot`), walks `/system` in sorted order (files by content, symlinks by target), raw `TPM2_PCR_Extend` through `/dev/tpm0`, event log in `/dev/shmem` |
 | Attestation agent | [agent/witnessd.c](agent/witnessd.c) `create_attestation_key`, `seal_new_secret`, `unseal_secret`, `answer` | QNX TCG stack from the SDP (`libtss2-esys`, `-mu`, `-rc`, `-tctildr` → `libtcti_tabrm` → `/dev/tpmrm0`); `TPM2_Quote`, `PolicyPCR`, `Create`/`Load`/`Unseal` |
 | Boot customisation | [image/witness-image.sh](image/witness-image.sh) | `mkqnximage` snippets: driver started in the IFS script before the system partition is mounted; measurement in `startup_postfs`; `tabrm` and `witnessd` in `post_start`; IFS load address for current OVMF ([image/uefi/definitions.zz_witness](image/uefi/definitions.zz_witness)) |
 | Security policy | [image/witness.secpol](image/witness.secpol) | QNX secpol: every Witness process starts under its own type (`START_P(tpm_driver_t)` …); only `tabrm_t` and `witness_measure_t` may connect to the driver and only `witnessd_t` to `tabrm`; the driver gets exactly `mem_phys` for its 4 KiB register page and `interrupt:5`. Built with `mkqnximage --secpol=secure --policy=…` |
@@ -154,8 +158,8 @@ commands and 40 interrupt wake-ups (interrupt mode, IRQ 5).
 - Timings measured under QEMU (KVM) are not hardware timings.
 - The attestation key is trusted on first use; binding it to the TPM manufacturer's endorsement
   certificate is the production step, and swtpm has no manufacturer certificate.
-- PCR 8 covers the files listed in [image/witness.manifest](image/witness.manifest); files outside the
-  manifest are not measured. The policy in [image/witness.secpol](image/witness.secpol) was learned
+- PCR 8 covers the read-mostly system partition (`/system`); the writable data partition (`/data`,
+  e.g. `authorized_keys`, logs) is not measured. The policy in [image/witness.secpol](image/witness.secpol) was learned
   with `secpolgenerate` for this QEMU image and then tightened by hand for the TPM paths.
 
 ## AI tools used
