@@ -1,12 +1,14 @@
-author: Shiran Yu
-summary: Boot QNX 8.0 on QEMU through UEFI with a TPM 2.0 attached, talk to the TPM from QNX, and prove that the firmware measured exactly the IFS you built.
 id: qnx-tpm-measured-boot-qemu
+title: Measured boot on QNX 8.0: give your QEMU target a TPM
+summary: Boot QNX 8.0 on QEMU through UEFI with a TPM 2.0 attached, talk to the TPM from QNX, and prove that the firmware measured exactly the IFS you built.
 categories: Security, Getting Started
-environments: Web
-status: Draft
-feedback link: https://github.com/qnx/codelabs/issues
 tags: intermediate
 platforms: QEMU
+published: 2026-11-27
+featured: false
+status: published
+authors: Shiran Yu
+feedback_link: https://github.com/qnx/codelabs/issues
 
 # Measured boot on QNX 8.0: give your QEMU target a TPM
 
@@ -32,6 +34,10 @@ PCR 4 changes. This is the first link of measured boot.
 - A Linux x86_64 host with the QNX SDP 8.0 installed (QNX Everywhere licence) and `qnxsdp-env.sh`
 - `qemu-system-x86_64` (tested with 10.2.1), `swtpm` (0.10.1), OVMF (`ovmf` package, 2025.11)
 - `git`, `make`, and Python 3.10+ with `uv`
+
+Every command below was run as written, from a fresh clone, on 2026-11-27: the PCR 4 that QNX read
+from the TPM equalled the host's prediction
+([run log](https://github.com/shiran-yu/witness-qnx/blob/main/docs/evidence/codelab-run.log)).
 
 ## Get the code and build the TPM driver
 Duration: 5:00

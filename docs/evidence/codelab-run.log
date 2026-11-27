@@ -1,0 +1,27 @@
+# docs/codelab/qnx-tpm-measured-boot-qemu.md followed as written from a fresh clone, 2026-11-27
+# QNX SDP 8.0, QEMU 10.2.1, swtpm, OVMF_CODE_4M.fd; KVM
+
+## clone and build
++ git clone https://github.com/shiran-yu/witness-qnx witness
+qcc -Vgcc_ntox86_64 -O2 -g -Wall -Wextra -Werror -std=gnu11 -D_QNX_SOURCE -fstack-protector-strong -D_FORTIFY_SOURCE=2 -o build/x86_64/dev-tpm-tis driver/main.c driver/tis.c
+qcc -Vgcc_ntox86_64 -O2 -g -Wall -Wextra -Werror -std=gnu11 -D_QNX_SOURCE -fstack-protector-strong -D_FORTIFY_SOURCE=2 -o build/x86_64/tpm-raw tools/tpm-raw.c
+qcc -Vgcc_ntox86_64 -O2 -g -Wall -Wextra -Werror -std=gnu11 -D_QNX_SOURCE -fstack-protector-strong -D_FORTIFY_SOURCE=2 -shared -fPIC -Wl,-soname,libtss2-tcti-witness.so.0 -o build/x86_64/libtss2-tcti-witness.so.0 tcti/tcti-witness.c
+qcc -Vgcc_ntox86_64 -O2 -g -Wall -Wextra -Werror -std=gnu11 -D_QNX_SOURCE -fstack-protector-strong -D_FORTIFY_SOURCE=2 -Ilib -o build/x86_64/witness-measure tools/witness-measure.c lib/sha256.c
+qcc -Vgcc_ntox86_64 -O2 -g -Wall -Wextra -Werror -std=gnu11 -D_QNX_SOURCE -fstack-protector-strong -D_FORTIFY_SOURCE=2 -o build/x86_64/witnessd agent/witnessd.c -ltss2-esys -ltss2-mu -ltss2-rc -ltss2-tctildr -lsocket
+qcc -Vgcc_ntox86_64 -O2 -g -Wall -Wextra -Werror -std=gnu11 -D_QNX_SOURCE -fstack-protector-strong -D_FORTIFY_SOURCE=2 -o build/x86_64/rt-probe tools/rt-probe.c
+
+## boot console (TPM lines)
+---> Starting TPM driver
+dev-tpm-tis: intf_caps 0x30000697 int_vector 5
+dev-tpm-tis: TPM 2.0 at 0xfed40000 vendor 0x1014 device 0x0001 rev 1, interrupt driven
+Startup complete
+QNX noname 8.0.0 2026/10/30-09:10:05EDT x86pc x86_64
+
+## target: tpm-raw 8001000000140000017e00000001000b03100000 (TPM2_PCR_Read, SHA-256 PCR 4)
+80010000003e000000000000014800000001000b031000000000000100205b635faa38a8702324adf4c1794da5c936028f905c49d269118ba15233bfee71
+
+## host prediction from output/ifs.bin (event string, separator, Authenticode digest)
+5b635faa38a8702324adf4c1794da5c936028f905c49d269118ba15233bfee71
+
+## result
+PCR 4 on the target equals the prediction: 5b635faa38a8702324adf4c1794da5c936028f905c49d269118ba15233bfee71
