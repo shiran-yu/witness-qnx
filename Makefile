@@ -12,7 +12,7 @@ CC = qcc -V$(QCC_TARGET)
 CFLAGS = -O2 -g -Wall -Wextra -Werror -std=gnu11 -D_QNX_SOURCE -fstack-protector-strong -D_FORTIFY_SOURCE=2
 OUT = build/$(ARCH)
 
-BINS = $(OUT)/dev-tpm-tis $(OUT)/tpm-raw
+BINS = $(OUT)/dev-tpm-tis $(OUT)/tpm-raw $(OUT)/libtss2-tcti-witness.so.0
 
 all: $(BINS)
 
@@ -24,6 +24,9 @@ $(OUT)/dev-tpm-tis: driver/main.c driver/tis.c driver/tis.h | $(OUT)
 
 $(OUT)/tpm-raw: tools/tpm-raw.c | $(OUT)
 	$(CC) $(CFLAGS) -o $@ tools/tpm-raw.c
+
+$(OUT)/libtss2-tcti-witness.so.0: tcti/tcti-witness.c | $(OUT)
+	$(CC) $(CFLAGS) -shared -fPIC -Wl,-soname,libtss2-tcti-witness.so.0 -o $@ tcti/tcti-witness.c
 
 clean:
 	rm -rf build

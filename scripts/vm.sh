@@ -11,6 +11,9 @@ TPM=${TPM:-tis}
 KVM=${KVM:-auto}
 QEMU=${QEMU:-qemu-system-x86_64}
 SWTPM=${SWTPM:-swtpm}
+BOOT=${BOOT:-$( [ -f "$VM_DIR/output/build/boot_part.build" ] && grep -q BOOTx64.EFI "$VM_DIR/output/build/boot_part.build" && echo uefi || echo kernel)}
+OVMF_CODE=${OVMF_CODE:-/usr/share/OVMF/OVMF_CODE_4M.fd}
+OVMF_VARS=${OVMF_VARS:-/usr/share/OVMF/OVMF_VARS_4M.fd}
 STATE="$VM_DIR/tpmstate"
 OUT="$VM_DIR/output"
 PIDF="$OUT/qemu.pid"
@@ -34,8 +37,14 @@ start() {
         tpm=(-chardev socket,id=chrtpm,path="$STATE/sock" -tpmdev emulator,id=tpm0,chardev=chrtpm
              -device tpm-tis,tpmdev=tpm0)
     fi
+    local boot=(-kernel "$OUT/ifs.bin")
+    if [ "$BOOT" = uefi ]; then
+        # UEFI firmware loads the IFS as EFI/BOOT/BOOTx64.EFI and measures it into PCR 4 (static root of trust)
+        [ -f "$VM_DIR/ovmf_vars.fd" ] || cp "$OVMF_VARS" "$VM_DIR/ovmf_vars.fd"
+        boot=(-drive if=pflash,format=raw,readonly=on,file="$OVMF_CODE" -drive if=pflash,format=raw,file="$VM_DIR/ovmf_vars.fd")
+    fi
     "$QEMU" "${accel[@]}" -smp 2 -m 1G -display none -no-reboot \
-        -kernel "$OUT/ifs.bin" -drive file="$OUT/disk-qemu",format=raw,if=ide,id=drv0 \
+        "${boot[@]}" -drive file="$OUT/disk-qemu",format=raw,if=ide,id=drv0 \
         -netdev user,id=net0,hostfwd=tcp:127.0.0.1:"$SSH_PORT"-:22,hostfwd=tcp:127.0.0.1:$((SSH_PORT + 1))-:7650 \
         -device virtio-net-pci,netdev=net0 \
         -object rng-random,filename=/dev/urandom,id=rng0 -device virtio-rng-pci,rng=rng0 \
