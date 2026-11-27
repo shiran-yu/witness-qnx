@@ -12,7 +12,7 @@ CC = qcc -V$(QCC_TARGET)
 CFLAGS = -O2 -g -Wall -Wextra -Werror -std=gnu11 -D_QNX_SOURCE -fstack-protector-strong -D_FORTIFY_SOURCE=2
 OUT = build/$(ARCH)
 
-BINS = $(OUT)/dev-tpm-tis $(OUT)/tpm-raw $(OUT)/libtss2-tcti-witness.so.0 $(OUT)/witness-measure
+BINS = $(OUT)/dev-tpm-tis $(OUT)/tpm-raw $(OUT)/libtss2-tcti-witness.so.0 $(OUT)/witness-measure $(OUT)/witnessd
 
 all: $(BINS)
 
@@ -30,6 +30,9 @@ $(OUT)/libtss2-tcti-witness.so.0: tcti/tcti-witness.c | $(OUT)
 
 $(OUT)/witness-measure: tools/witness-measure.c lib/sha256.c lib/sha256.h | $(OUT)
 	$(CC) $(CFLAGS) -Ilib -o $@ tools/witness-measure.c lib/sha256.c
+
+$(OUT)/witnessd: agent/witnessd.c | $(OUT)
+	$(CC) $(CFLAGS) -o $@ agent/witnessd.c -ltss2-esys -ltss2-mu -ltss2-rc -ltss2-tctildr -lsocket
 
 clean:
 	rm -rf build
