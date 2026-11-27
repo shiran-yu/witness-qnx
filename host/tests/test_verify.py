@@ -83,12 +83,9 @@ def test_every_quote_byte_is_covered(good, reference, enrollment):
     original = good["attestation"]["quote"]
     for position in range(len(original) // 2):
         attestation = dict(good["attestation"], quote=flip(original, position))
-        try:
-            verdict = appraise(attestation, good["nonce"], reference, enrollment)
-        except ValueError:
-            continue
+        verdict = appraise(attestation, good["nonce"], reference, enrollment)
         assert not verdict.trusted, position
-        assert checks(verdict)["quote signature"] is False, position
+        assert checks(verdict).get("quote signature", checks(verdict).get("evidence")) is False, position
 
 
 def test_every_signature_byte_is_covered(good, reference, enrollment):

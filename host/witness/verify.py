@@ -46,6 +46,15 @@ def parse_eventlog(lines: list[str]) -> list[dict]:
 
 
 def appraise(attestation: dict, nonce: bytes, reference: dict, enrollment: dict | None) -> Verdict:
+    try:
+        return _appraise(attestation, nonce, reference, enrollment)
+    except (ValueError, KeyError, TypeError) as error:  # malformed evidence fails closed with a verdict
+        verdict = Verdict(trusted=False, sealed=str(attestation.get("sealed", "unknown")))
+        verdict.checks.append(Check("evidence", False, f"malformed attestation: {error!r}"))
+        return verdict
+
+
+def _appraise(attestation: dict, nonce: bytes, reference: dict, enrollment: dict | None) -> Verdict:
     verdict = Verdict(trusted=False, sealed=attestation.get("sealed", "unknown"))
     add = verdict.checks.append
 
