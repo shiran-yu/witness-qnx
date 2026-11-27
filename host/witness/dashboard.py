@@ -17,6 +17,7 @@ import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from .tpm import parse_public, parse_quote
+from .reports import ReportDesk
 from .verify import FIRMWARE_PCRS, appraise, parse_eventlog
 
 STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
@@ -153,6 +154,16 @@ class Fleet:
         self.reference, self.devices, self.state = reference, {d.name: d for d in devices}, state
         self.fixed_enrollment, self.environment, self.interval = enrollment, environment, interval
         self.mode = "replay" if all(d.evidence for d in devices) else "live"
+        self.reports = ReportDesk(self.device_keys)
+
+    def device_keys(self) -> dict:
+        """Enrolled device key per device: the only keys a signed fleet report may carry."""
+        keys = {}
+        for device in self.devices.values():
+            key = (self.enrollment(device) or {}).get("device_key")
+            if key:
+                keys[device.name] = key
+        return keys
 
     def enrollment(self, device: Device) -> dict | None:
         if device.evidence:
@@ -233,7 +244,8 @@ class Fleet:
                 "ak_fingerprint": latest.get("ak_fingerprint"),
                 "enrolled": latest.get("enrolled"), "time": latest.get("time"), "error": error,
                 "failed_check": next((f"{c['name']}: {c['detail']}" for c in latest.get("checks", []) if not c["ok"]), None),
-                "findings": latest.get("findings", []), "history": list(device.history)}
+                "findings": latest.get("findings", []), "history": list(device.history),
+                "reports": self.reports.status(device.name)}
 
     def detail(self, device: Device) -> dict:
         summary, latest = self.summary(device), device.latest
@@ -247,7 +259,8 @@ class Fleet:
         return {"mode": self.mode, "interval": self.interval, "environment": self.environment, "now": time.time(),
                 "reference": {"image": reference.get("image"), "created": reference.get("created"),
                               "boot_mode": reference.get("boot_mode"), "ifs_sha256": reference.get("ifs_sha256")},
-                "devices": [self.summary(d) for d in self.devices.values()]}
+                "devices": [self.summary(d) for d in self.devices.values()],
+                "reports_rejected": dict(self.reports.rejected)}
 
     def watch(self, stop: threading.Event) -> None:
         # one loop per device: a hung device must not delay the others
@@ -289,6 +302,8 @@ def handler_for(fleet: Fleet):
             parts = path.strip("/").split("/")
             if path == "/api/devices":
                 return self.send_json(200, fleet.overview())
+            if path == "/api/report/challenge":
+                return self.send_json(200, {"nonce": fleet.reports.challenge()})
             if parts[:2] == ["api", "devices"] and len(parts) == 3:
                 device = self.device(parts)
                 return self.send_json(200, fleet.detail(device)) if device else self.send_json(404, {"error": "no such device"})
@@ -302,6 +317,13 @@ def handler_for(fleet: Fleet):
 
         def do_POST(self):
             parts = urllib.parse.urlparse(self.path).path.strip("/").split("/")
+            if parts == ["api", "report"]:  # a device's signed fleet report (witness/reports.py)
+                try:
+                    length = int(self.headers.get("Content-Length", "0"))
+                    body = json.loads(self.rfile.read(length)) if 0 < length <= 4096 else None
+                except ValueError:
+                    body = None
+                return self.send_json(*fleet.reports.submit(body))
             if parts[:2] == ["api", "devices"] and len(parts) == 4 and parts[3] == "verify":
                 device = self.device(parts)
                 if not device:

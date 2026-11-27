@@ -13,7 +13,7 @@ CFLAGS = -O2 -g -Wall -Wextra -Werror -std=gnu11 -D_QNX_SOURCE -fstack-protector
 OUT = build/$(ARCH)
 
 BINS = $(OUT)/dev-tpm-tis $(OUT)/tpm-raw $(OUT)/libtss2-tcti-witness.so.0 $(OUT)/witness-measure $(OUT)/witnessd \
-       $(OUT)/rt-probe
+       $(OUT)/rt-probe $(OUT)/witness-report
 
 all: $(BINS)
 
@@ -33,8 +33,12 @@ $(OUT)/witness-measure: tools/witness-measure.c lib/sha256.c lib/sha256.h | $(OU
 	$(CC) $(CFLAGS) -Ilib -o $@ tools/witness-measure.c lib/sha256.c
 
 # the TCTI is linked in, not dlopen'd: a restarted agent runs only code mapped at its measured launch
-$(OUT)/witnessd: agent/witnessd.c tcti/tcti-witness.c | $(OUT)
+$(OUT)/witnessd: agent/witnessd.c agent/witness-report.h tcti/tcti-witness.c | $(OUT)
 	$(CC) $(CFLAGS) -o $@ agent/witnessd.c tcti/tcti-witness.c -ltss2-esys -ltss2-mu -ltss2-rc -lcrypto -lsocket
+
+# signed fleet reports: the application that asks witnessd to sign over its QNX channel
+$(OUT)/witness-report: tools/witness-report.c agent/witness-report.h | $(OUT)
+	$(CC) $(CFLAGS) -o $@ tools/witness-report.c -lsocket
 
 $(OUT)/rt-probe: tools/rt-probe.c | $(OUT)  # latency test only; not in the image
 	$(CC) $(CFLAGS) -o $@ tools/rt-probe.c

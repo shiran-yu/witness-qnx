@@ -29,6 +29,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/dispatch.h>
+#include <sys/neutrino.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -40,6 +42,7 @@
 #include <tss2/tss2_rc.h>
 #include <tss2/tss2_tcti.h>
 #include <openssl/crypto.h>
+#include "witness-report.h"
 
 TSS2_RC Tss2_Tcti_Witness_Init(TSS2_TCTI_CONTEXT *tcti_context, size_t *size, const char *config); /* tcti/tcti-witness.c */
 
@@ -54,6 +57,7 @@ TSS2_RC Tss2_Tcti_Witness_Init(TSS2_TCTI_CONTEXT *tcti_context, size_t *size, co
 #define AGENT_PRIORITY 8 /* below QNX's default 10; children inherit it */
 
 static ESYS_CONTEXT *esys;
+static pthread_mutex_t tpm_lock = PTHREAD_MUTEX_INITIALIZER; /* ESYS is not thread safe: TCP and report threads */
 static ESYS_TR attestation_key = ESYS_TR_NONE;
 static TPM2B_PUBLIC *attestation_key_public;
 static ESYS_TR device_key = ESYS_TR_NONE;
@@ -455,18 +459,18 @@ out:
     return rc;
 }
 
-/* Sign SHA256(DEVICE_KEY_LABEL || data) with the device key; the TPM refuses unless the PCR policy holds. */
-static TSS2_RC device_key_sign(const uint8_t *data, size_t size, TPMT_SIGNATURE **signature)
+/* Sign SHA256(label || data) with the device key; the TPM refuses unless the PCR policy holds. The label
+ * separates uses: a report signature ("witness:report:") is never a valid attestation ("witness:device-key:"). */
+static TSS2_RC device_key_sign(const char *label, const uint8_t *data, size_t size, TPMT_SIGNATURE **signature)
 {
-    uint8_t message[sizeof DEVICE_KEY_LABEL - 1 + sizeof(TPM2B_DATA)];
-    TPM2B_MAX_BUFFER buffer = {.size = (UINT16)(sizeof DEVICE_KEY_LABEL - 1 + size)};
+    size_t label_size = strlen(label);
+    TPM2B_MAX_BUFFER buffer = {.size = (UINT16)(label_size + size)};
     TPM2B_DIGEST *digest = NULL;
     TPMT_TK_HASHCHECK *ticket = NULL;
-    if (device_key == ESYS_TR_NONE || size > sizeof(TPM2B_DATA))
+    if (device_key == ESYS_TR_NONE || label_size + size > sizeof buffer.buffer)
         return TSS2_ESYS_RC_BAD_VALUE;
-    memcpy(message, DEVICE_KEY_LABEL, sizeof DEVICE_KEY_LABEL - 1);
-    memcpy(message + sizeof DEVICE_KEY_LABEL - 1, data, size);
-    memcpy(buffer.buffer, message, buffer.size);
+    memcpy(buffer.buffer, label, label_size);
+    memcpy(buffer.buffer + label_size, data, size);
     TSS2_RC rc = Esys_Hash(esys, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, &buffer, TPM2_ALG_SHA256, ESYS_TR_RH_NULL,
                            &digest, &ticket);
     if (rc != TSS2_RC_SUCCESS)
@@ -556,7 +560,7 @@ static void provision_or_load(void)
     Esys_FlushContext(esys, storage_key);
     TPMT_SIGNATURE *probe = NULL;
     if (rc == TSS2_RC_SUCCESS)
-        rc = device_key_sign((const uint8_t *)"boot", 4, &probe);
+        rc = device_key_sign(DEVICE_KEY_LABEL, (const uint8_t *)"boot", 4, &probe);
     Esys_Free(probe);
     struct release release = read_release();
     if (rc == TSS2_RC_SUCCESS) {
@@ -679,7 +683,7 @@ static void answer(FILE *out, const char *request)
     if (read_pcrs(out) != TSS2_RC_SUCCESS)
         fprintf(out, "\"pcrs_error\":true,");
     TPMT_SIGNATURE *device_signature = NULL;
-    rc = device_key_sign(nonce.buffer, nonce.size, &device_signature);
+    rc = device_key_sign(DEVICE_KEY_LABEL, nonce.buffer, nonce.size, &device_signature);
     /* the state of this request, not of start-up: a release policy may have arrived since */
     fprintf(out, "\"sealed\":");
     json_string(out, rc == TSS2_RC_SUCCESS ? "unsealed" : device_key == ESYS_TR_NONE ? sealed_state : "locked");
@@ -774,6 +778,7 @@ static void serve(int port)
                     pending[i].len += (size_t)n;
                     pending[i].line[pending[i].len] = '\0';
                     if (strchr(pending[i].line, '\n')) {
+                        pthread_mutex_lock(&tpm_lock);
                         alarm(WATCHDOG_SECONDS); /* a hang in the TPM path ends this agent instance */
                         FILE *output = fdopen(pending[i].fd, "w");
                         if (output) {
@@ -782,6 +787,7 @@ static void serve(int port)
                             pending[i].fd = -1;
                         }
                         alarm(0);
+                        pthread_mutex_unlock(&tpm_lock);
                         done = 1;
                     } else if (pending[i].len == sizeof pending[i].line - 1) {
                         done = 1; /* no newline in a full buffer: not our protocol */
@@ -816,6 +822,54 @@ static void serve(int port)
             pending[count].line[0] = '\0';
             pending[count++].deadline = now + REQUEST_BUDGET_MS;
         }
+    }
+}
+
+/* Local signing channel for fleet reports (witness-report.h): QNX message passing, so the security policy decides
+ * which process types may connect; the TCP port never signs caller data. */
+static void *report_channel(void *unused)
+{
+    (void)unused;
+    name_attach_t *attach = name_attach(NULL, REPORT_CHANNEL, 0);
+    if (attach == NULL) {
+        fprintf(stderr, "witnessd: no report channel: name_attach: %s\n", strerror(errno));
+        return NULL;
+    }
+    for (;;) {
+        union { struct _pulse pulse; uint16_t type; struct report_request request; } msg;
+        int rcvid = MsgReceive(attach->chid, &msg, sizeof msg, NULL);
+        if (rcvid == -1)
+            continue;
+        if (rcvid == 0) { /* pulse: a client went away */
+            if (msg.pulse.code == _PULSE_CODE_DISCONNECT)
+                ConnectDetach(msg.pulse.scoid);
+            continue;
+        }
+        if (msg.type == _IO_CONNECT) { /* name_open() */
+            MsgReply(rcvid, EOK, NULL, 0);
+            continue;
+        }
+        if (msg.type != REPORT_MSG || msg.request.size > REPORT_MAX) {
+            MsgError(rcvid, msg.type == REPORT_MSG ? EMSGSIZE : ENOSYS);
+            continue;
+        }
+        struct report_reply reply = {0};
+        TPMT_SIGNATURE *signature = NULL;
+        pthread_mutex_lock(&tpm_lock);
+        alarm(WATCHDOG_SECONDS);
+        TSS2_RC rc = device_key_sign(REPORT_LABEL, (const uint8_t *)msg.request.report, msg.request.size, &signature);
+        alarm(0);
+        pthread_mutex_unlock(&tpm_lock);
+        reply.rc = rc;
+        if (rc == TSS2_RC_SUCCESS && signature->sigAlg == TPM2_ALG_ECDSA) {
+            TPMS_SIGNATURE_ECC *ecc = &signature->signature.ecdsa;
+            reply.r_size = ecc->signatureR.size <= 32 ? ecc->signatureR.size : 0;
+            reply.s_size = ecc->signatureS.size <= 32 ? ecc->signatureS.size : 0;
+            memcpy(reply.r, ecc->signatureR.buffer, reply.r_size);
+            memcpy(reply.s, ecc->signatureS.buffer, reply.s_size);
+        }
+        Esys_Free(signature);
+        MsgReply(rcvid, EOK, &reply, sizeof reply);
     }
 }
 
@@ -888,6 +942,9 @@ static int run_agent(int port, const char *tpm_device)
     }
     provision_or_load();
     alarm(0);
+    pthread_t reporter;
+    if (pthread_create(&reporter, NULL, report_channel, NULL) != 0)
+        fprintf(stderr, "witnessd: no report channel thread\n");
     serve(port);
     return EXIT_SUCCESS;
 }

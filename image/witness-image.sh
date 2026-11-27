@@ -15,7 +15,7 @@ BUILD="$ROOT/build/x86_64"
 SNIPPETS="$IMAGE_DIR/local/snippets"
 
 [ -d "$SNIPPETS" ] || { echo "witness-image: $IMAGE_DIR is not a mkqnximage directory (run mkqnximage once)" >&2; exit 1; }
-for f in dev-tpm-tis witness-measure libtss2-tcti-witness.so.0 tpm-raw witnessd; do
+for f in dev-tpm-tis witness-measure libtss2-tcti-witness.so.0 tpm-raw witnessd witness-report; do
     [ -f "$BUILD/$f" ] || { echo "witness-image: $BUILD/$f missing; run make first" >&2; exit 1; }
 done
 
@@ -80,6 +80,7 @@ lib/libtss2_helper.so.1=lib/libtss2_helper.so.1
 lib/libtss2-tcti-witness.so.0=$BUILD/libtss2-tcti-witness.so.0
 [perms=0555] bin/tpm-raw=$BUILD/tpm-raw
 [perms=0555] bin/witnessd=$BUILD/witnessd
+[perms=0555] bin/witness-report=$BUILD/witness-report
 EOF
 
 # 6. post start: application layer measured into PCR 9, then started. witnessd is the only TPM client
@@ -89,6 +90,8 @@ echo "---> Witness: measuring applications into PCR 9"
 START_P(witness_measure_t) /proc/boot/witness-measure -p 9 -m /proc/boot/witness-apps.manifest
 echo "---> Witness: starting attestation agent (port 7650)"
 START_P(witnessd_t) witnessd
+echo "---> Witness: starting signed fleet reports (to the host, 10.0.2.2:8650)"
+START_P(witness_report_t) witness-report
 EOF
 
 echo "witness-image: snippets written to $SNIPPETS"

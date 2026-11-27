@@ -42,6 +42,7 @@ type tpm_driver_t;
 type user_root_t;
 type witness_measure_t;
 type witnessd_t;
+type witness_report_t;
 
 ability vfs/mount-blk allow { root };
 ability vfs/pregrow allow { root };
@@ -496,12 +497,27 @@ allow witness_measure_t self:ability {
 };
 
 # === Rules for type witnessd_t ============
+allow_attach witnessd_t {
+    /dev/name/local/witness/report
+};
 allow witnessd_t self:ability {
     fork
     prot_exec
     priority:0-253
     map_fixed
     channel_connect:slogger_t,devb_t,random_t,io_sock_t,tpm_driver_t
+    network/jailroot
+    pathspace
+    public_channel
+};
+
+# === Rules for type witness_report_t ============
+# The fleet-report application: the only type that may ask witnessd (its report channel) to sign.
+allow witness_report_t self:ability {
+    fork
+    prot_exec
+    map_fixed
+    channel_connect:slogger_t,devb_t,io_sock_t,witnessd_t
     network/jailroot
 };
 
