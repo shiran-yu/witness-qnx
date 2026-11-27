@@ -73,10 +73,16 @@ static void to_hex(char *out, const uint8_t *data, size_t size)
 static int report_once(const char *server, unsigned seq, int verbose)
 {
     char body[1024], nonce[129] = "";
+    int coid = name_open(REPORT_CHANNEL, 0); /* first: the security policy decides here, service or not */
+    if (coid == -1 && verbose)
+        fprintf(stderr, "witness-report: no channel to witnessd: %s\n", strerror(errno));
+    int channel_errno = errno;
     if (http(server, "GET", "/api/report/challenge", NULL, body, sizeof body) != 200 ||
         sscanf(body, "{\"nonce\": \"%128[0-9a-f]\"", nonce) != 1) {
         if (verbose)
             fprintf(stderr, "witness-report: no challenge from %s\n", server);
+        if (coid != -1)
+            name_close(coid);
         return -1;
     }
     char hostname[64] = "unknown";
@@ -90,11 +96,10 @@ static int report_once(const char *server, unsigned seq, int verbose)
     request.size = (uint16_t)n;
 
     struct report_reply reply = {.rc = 1};
-    int coid = name_open(REPORT_CHANNEL, 0);
     const char *error = NULL;
     char error_text[96];
     if (coid == -1) {
-        snprintf(error_text, sizeof error_text, "no channel to witnessd: %s", strerror(errno));
+        snprintf(error_text, sizeof error_text, "no channel to witnessd: %s", strerror(channel_errno));
         error = error_text;
     } else {
         if (MsgSend(coid, &request, sizeof request, &reply, sizeof reply) == -1) {

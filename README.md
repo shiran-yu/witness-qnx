@@ -33,7 +33,11 @@ Each device also holds a **device key**, created inside its TPM, that the TPM le
 boot state (PCR 4, 5, 8 and 9: boot image, disk, system partition and `/etc`, applications) equals a
 release signed by the build host's **release key** (`TPM2_PolicyAuthorize`), and the firmware
 (PCR 0, 2, 7) equals this device's own. The key signs every attestation request, and the verifier
-checks its TPM policy, so a tampered device loses its own credential and cannot fake having it. A
+checks its TPM policy, so a tampered device loses its own credential and cannot fake having it. The
+credential does a job: the device's status reports (`witness-report`, every 10 s, bound to a one-time
+challenge) reach the fleet service only signed by that key, through a QNX channel that only the report
+app's security type may open, and the fleet service accepts nothing else. A tampered device is cut off
+from its fleet backend by its own TPM, with no operator action. A
 signed update keeps it: `demo.sh update` installs release v2 the way an update agent would (here over
 ssh) and the same key is released again, with no re-provisioning. A rollback does not: each
 release is numbered, and once the TPM has accepted release 2 it refuses release 1's genuine
@@ -175,6 +179,8 @@ tpm-raw: open /dev/tpm0: Operation not permitted
 on: Operation not permitted (/system/bin/witnessd)
 # on -T witness_measure_t /proc/boot/witness-measure -p 8 -s forged
 on: Operation not permitted (/proc/boot/witness-measure)
+# witness-report -1 -s 127.0.0.1:9                     (ask the agent's channel to sign a fleet report)
+witness-report: no channel to witnessd: Operation not permitted
 # echo touch /tmp/pwned > /boot/onboot                 (a boot hook; it would not be run anyway)
 sh: cannot create /boot/onboot: Read-only file system
 # swap /system/lib/libtss2-esys.so.1, then kill the agent so its supervisor restarts it
@@ -291,11 +297,11 @@ partitioning, pulses of its own, qvm or QTD.
 | QNX capability | What Witness does with it | Evidence |
 |---|---|---|
 | Resource managers | The TPM driver is a resource manager serving `/dev/tpm0` and `/dev/tpm0-stats`: custom OCB per client, `iofunc_notify` for `select`/`poll` | [driver/main.c](driver/main.c) (`resmgr_attach`, `dispatch_create`) |
-| Native message passing | Every TPM command from the measurement tool and the agent is a QNX message to that one process; the kernel queues the clients in priority order, so no client needs the TPM's memory or interrupt | [driver/main.c](driver/main.c) `io_write`/`io_read`; [tcti/tcti-witness.c](tcti/tcti-witness.c) |
+| Native message passing | Every TPM command from the measurement tool and the agent is a QNX message to that one process; the kernel queues the clients in priority order, so no client needs the TPM's memory or interrupt. witnessd's own channel (`name_attach`) signs fleet reports: `MsgSend` from the report app, `MsgReceive`/`MsgReply` in the agent, running at the sender's priority | [driver/main.c](driver/main.c) `io_write`/`io_read`; [tcti/tcti-witness.c](tcti/tcti-witness.c); [agent/witnessd.c](agent/witnessd.c) `report_channel`; [tools/witness-report.c](tools/witness-report.c) |
 | Microkernel architecture | Hardware access lives in one user-space process with exactly one 4 KiB register page and one interrupt; the agent is a separate process under a supervisor that restarts it | [driver/tis.c](driver/tis.c) `mmap_device_memory`; [agent/witnessd.c](agent/witnessd.c) `main` |
 | QNX 8.0 interrupt model | `InterruptAttachThread` + `InterruptWait`, bounded with `TimerTimeout(_NTO_TIMEOUT_INTR)`; an interrupt self-test falls back to polling | [driver/tis.c](driver/tis.c); boot console line `interrupt driven` |
 | Startup and boot customisation | `mkqnximage` snippets start the driver in the IFS script and measure `/system` and `/etc` right after mount, before any boot script reads them; the IFS load address is moved so current OVMF loads it | [image/witness-image.sh](image/witness-image.sh), [image/uefi/definitions.zz_witness](image/uefi/definitions.zz_witness) |
-| Security policies | Each component runs under its own secpol type; only the measurement tool and the agent may connect to the driver; root over ssh gets "Operation not permitted" | [image/witness.secpol](image/witness.secpol); `demo.sh attack` |
+| Security policies | Each component runs under its own secpol type; only the measurement tool and the agent may connect to the driver, and only the report app (`witness_report_t`) to the agent's signing channel; root over ssh gets "Operation not permitted" on both | [image/witness.secpol](image/witness.secpol); `demo.sh attack` |
 | Real-time services | The agent runs at priority 8, below QNX's default 10; a 1 kHz `SCHED_FIFO` loop at 10 saw no more late periods during an attestation flood than idle (QEMU, three runs) | [agent/witnessd.c](agent/witnessd.c) `pthread_setschedparam`; [docs/evidence/latency.log](docs/evidence/latency.log) |
 | QNX's TCG software stack | The agent uses the SDP's `libtss2-esys`/`-mu`/`-rc`; Witness adds the TCTI module the SDP does not ship | [tcti/tcti-witness.c](tcti/tcti-witness.c) |
 
