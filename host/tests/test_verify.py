@@ -31,10 +31,27 @@ def test_good_is_trusted(good, reference, enrollment):
     json.dumps(verdict.to_dict())  # serialisable for --json
 
 
-def test_good_without_enrollment_is_trusted_on_first_use(good, reference):
-    verdict = appraise(good["attestation"], good["nonce"], reference, None)
+def test_good_while_enrolling_is_trusted_on_first_use(good, reference):
+    verdict = appraise(good["attestation"], good["nonce"], reference, None, enrolling=True)
     assert verdict.trusted
     assert "enrolling now" in next(c.detail for c in verdict.checks if c.name == "attestation key")
+
+
+def test_unenrolled_device_fails_closed(good, reference):
+    verdict = appraise(good["attestation"], good["nonce"], reference, None)
+    assert not verdict.trusted
+    assert checks(verdict) == {"attestation key": False}
+
+
+def test_software_key_quote_on_unenrolled_device_fails(good, reference):
+    forged = forge(good["attestation"], good["nonce"], ec.generate_private_key(ec.SECP256R1()))
+    assert not appraise(forged, good["nonce"], reference, None).trusted
+
+
+def test_non_object_evidence_is_a_verdict(good, reference, enrollment):
+    for bad in ([], "x", None, 3):
+        verdict = appraise(bad, good["nonce"], reference, enrollment)
+        assert not verdict.trusted and checks(verdict) == {"evidence": False}
 
 
 def test_enrollment_from_good_matches_fixture(good, enrollment):

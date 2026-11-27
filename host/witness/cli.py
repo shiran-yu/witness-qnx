@@ -38,7 +38,7 @@ def enrollment_path(directory: str, device: str) -> str:
 def print_verdict(verdict, device: str) -> None:
     color = GREEN if verdict.trusted else RED
     print(f"{BOLD}{device}{RESET}  {color}{BOLD}{'TRUSTED' if verdict.trusted else 'NOT TRUSTED'}{RESET}"
-          f"   device secret: {verdict.sealed}")
+          f"   device secret: {verdict.sealed} {DIM}(reported by agent){RESET}")
     for check in verdict.checks:
         mark = f"{GREEN}pass{RESET}" if check.ok else f"{RED}FAIL{RESET}"
         print(f"  {mark}  {check.name:<28} {DIM}{check.detail}{RESET}")
@@ -100,13 +100,17 @@ def main(argv=None) -> int:
     os.makedirs(args.state, exist_ok=True)
     path = enrollment_path(args.state, args.device)
     nonce = os.urandom(20)
-    attestation = request_attestation(args.device, nonce)
+    try:
+        attestation = request_attestation(args.device, nonce)
+    except (OSError, ValueError) as error:  # unreachable or not JSON: no evidence, not trusted
+        print(f"{BOLD}{args.device}{RESET}  {RED}{BOLD}NOT TRUSTED{RESET}   no attestation: {error}")
+        return 2
     if args.save:
         with open(args.save, "w") as out:
             json.dump({"nonce": nonce.hex(), "attestation": attestation}, out, indent=1)
 
     if args.command == "enroll":
-        verdict = appraise(attestation, nonce, reference_values, None)
+        verdict = appraise(attestation, nonce, reference_values, None, enrolling=True)
         if not verdict.trusted:
             print_verdict(verdict, args.device)
             print(f"{RED}refusing to enroll a device that does not match the release{RESET}")

@@ -45,16 +45,20 @@ def parse_eventlog(lines: list[str]) -> list[dict]:
     return events
 
 
-def appraise(attestation: dict, nonce: bytes, reference: dict, enrollment: dict | None) -> Verdict:
+def appraise(attestation: dict, nonce: bytes, reference: dict, enrollment: dict | None,
+             enrolling: bool = False) -> Verdict:
+    """Without an enrollment the device is NOT TRUSTED, unless enrolling (witness enroll, a known-good boot)."""
     try:
-        return _appraise(attestation, nonce, reference, enrollment)
-    except (ValueError, KeyError, TypeError) as error:  # malformed evidence fails closed with a verdict
-        verdict = Verdict(trusted=False, sealed=str(attestation.get("sealed", "unknown")))
+        if not isinstance(attestation, dict):
+            raise TypeError(f"expected a JSON object, got {type(attestation).__name__}")
+        return _appraise(attestation, nonce, reference, enrollment, enrolling)
+    except (ValueError, KeyError, TypeError, AttributeError) as error:  # malformed evidence fails closed with a verdict
+        verdict = Verdict(trusted=False, sealed="unknown")
         verdict.checks.append(Check("evidence", False, f"malformed attestation: {error!r}"))
         return verdict
 
 
-def _appraise(attestation: dict, nonce: bytes, reference: dict, enrollment: dict | None) -> Verdict:
+def _appraise(attestation: dict, nonce: bytes, reference: dict, enrollment: dict | None, enrolling: bool) -> Verdict:
     verdict = Verdict(trusted=False, sealed=attestation.get("sealed", "unknown"))
     add = verdict.checks.append
 
@@ -65,6 +69,9 @@ def _appraise(attestation: dict, nonce: bytes, reference: dict, enrollment: dict
     key = parse_public(bytes.fromhex(attestation["ak_public"]))
     quote = parse_quote(bytes.fromhex(attestation["quote"]))
     enrolled_key = enrollment and enrollment.get("ak_public")
+    if not enrolled_key and not enrolling:
+        add(Check("attestation key", False, f"AK {key.fingerprint()} is not enrolled: run witness enroll on a known-good boot"))
+        return verdict
     if enrolled_key and enrolled_key != attestation["ak_public"]:
         add(Check("attestation key", False, "key differs from the enrolled key: different TPM or replaced device"))
         return verdict
