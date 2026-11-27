@@ -117,8 +117,10 @@ must not become a new way into the device. QNX's architecture gives both, and Wi
   ([demo/latency.sh](demo/latency.sh), [docs/evidence/latency.log](docs/evidence/latency.log)): a
   1 kHz loop at priority 10 while the host floods witnessd (~21 attestations/s) had 1, 4, 0 and 5
   periods over 1 ms late in four 30 s runs, about as many as idle (3, 1, 3, 2); the same loop at
-  priority 7, below witnessd, had 10, 4, 39 and 73. Two more runs, on a busy host where even the idle
-  rows degrade, are in the log. QEMU (KVM) on a laptop, not hardware timings: the rows compare.
+  priority 7, below witnessd, had 10, 4, 39 and 73. On a busy host (runs 5-8 in the log, and an
+  independent rerun) the host's own noise reaches the guest: even idle rows show 19 to 297 late periods
+  and the flood rows no longer separate cleanly, so this contrast holds only on a quiet host. QEMU (KVM)
+  on a laptop, not hardware timings: the rows compare within a run, nothing more.
 - *Measure before use.* The driver and the measurement tool live in the boot image, which the
   firmware measures, and run from QNX's own boot script before it reads anything on the system
   partition or in `/etc` (where `start_net.sh` sources `settings/network` as shell code). The stock
