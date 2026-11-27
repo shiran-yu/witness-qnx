@@ -28,8 +28,8 @@ Path=1 - Intel 82371SB
 
 To exit QEMU, type <ctrl>a x
 
-[?7hProcess count:24
+[?7hProcess count:23
 Startup complete
 QNX noname 8.0.0 2026/10/30-09:10:05EDT x86pc x86_64
-witnessd: device key released (boot state matches the provisioned state)
+witnessd: device key released (boot state matches a signed release)
 witnessd: listening on port 7650

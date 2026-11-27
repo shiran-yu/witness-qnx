@@ -1,15 +1,17 @@
 ==> cross-building Witness for QNX 8.0 x86_64
 ==> creating a UEFI QNX 8.0 image with the Witness layer
-==> computing reference values from the build output
-wrote <repo>/.work/reference.json: boot=uefi PCR4=c2a443ca11d8… PCR5=26aea97b30d1… PCR8=127defac2c8b… PCR9=a73ab2d338b8…, 253 PCR 8 + 1 PCR 9 expected events, 252 files
+==> computing reference values from the build output and signing the release
+wrote <repo>/.work/reference.json.policy: release PCR policy signed for PCR 4,5,8,9
+wrote <repo>/.work/reference.json: boot=uefi PCR4=9940a1522289… PCR5=c7aeb51bdf7a… PCR8=1fcb51eeac66… PCR9=1bef31528005…, 253 PCR 8 + 1 PCR 9 expected events, 252 files
 started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
 ==> waiting for witnessd
+==> delivering the signed release policy to /data/var/witness/release-policy
 ---> Witness: starting TPM driver
 ---> Witness: measuring system partition and boot configuration into PCR 8
 ---> Witness: measuring applications into PCR 9
 ---> Witness: starting attestation agent (port 7650)
-witnessd: provisioned: device key bound to PCR 0,2,4,5,7,8,9
-witnessd: device key released (boot state matches the provisioned state)
+witnessd: provisioned: device key bound to releases signed by the release key
+witnessd: device key locked until a signed release policy is delivered
 witnessd: listening on port 7650
 enrolled 127.0.0.1:10023: <repo>/.work/state/enrolled-127.0.0.1_10023.json
 127.0.0.1:10023  TRUSTED   device key: released (proven by TPM signature)
@@ -24,7 +26,7 @@ enrolled 127.0.0.1:10023: <repo>/.work/state/enrolled-127.0.0.1_10023.json
   pass  event log (PCR 9)            log replays to the quoted PCR
   pass  system and /etc (PCR 8)      253 measurement(s) match the release
   pass  applications (PCR 9)         1 measurement(s) match the release
-  pass  device key (PCR 0,2,4,5,7,8,9) TPM released the key bound to the released boot state; it signed our nonce
+  pass  device key (signed release, PCR 4,5,8,9) TPM released the key bound to the released boot state; it signed our nonce
 127.0.0.1:10023  TRUSTED   device key: released (proven by TPM signature)
   pass  attestation key              AK 59a38e285aa23b6e
   pass  quote signature              ECDSA P-256 over TPMS_ATTEST
@@ -37,7 +39,7 @@ enrolled 127.0.0.1:10023: <repo>/.work/state/enrolled-127.0.0.1_10023.json
   pass  event log (PCR 9)            log replays to the quoted PCR
   pass  system and /etc (PCR 8)      253 measurement(s) match the release
   pass  applications (PCR 9)         1 measurement(s) match the release
-  pass  device key (PCR 0,2,4,5,7,8,9) TPM released the key bound to the released boot state; it signed our nonce
+  pass  device key (signed release, PCR 4,5,8,9) TPM released the key bound to the released boot state; it signed our nonce
 ==> root on the device tries to extend PCR 8, run its own agent with the agent's type, borrow the measurer's type, and plant a boot hook
 # tpm-raw 80020000004100000182000000080000000940000009000000000000000001000b0000000000000000000000000000000000000000000000000000000000000000
 tpm-raw: open /dev/tpm0: Operation not permitted
@@ -66,7 +68,7 @@ started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.lo
   pass  event log (PCR 9)            log replays to the quoted PCR
   FAIL  system and /etc (PCR 8)      1 difference(s) from the release
   pass  applications (PCR 9)         1 measurement(s) match the release
-  FAIL  device key (PCR 0,2,4,5,7,8,9) TPM refused to release the device key: tpm:session(1):a policy check failed
+  FAIL  device key (signed release, PCR 4,5,8,9) TPM refused to release the device key: tpm:parameter(1):value is out of range or is not correct for the context
        CHANGED  PCR 8  /system/etc/ssh/sshd_config
                   expected 4e2e95dc5d0f3652…  got 294c7dd0399bfc3a…
 (exit 2)
@@ -87,7 +89,7 @@ started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.lo
   pass  event log (PCR 9)            log replays to the quoted PCR
   FAIL  system and /etc (PCR 8)      1 difference(s) from the release
   pass  applications (PCR 9)         1 measurement(s) match the release
-  FAIL  device key (PCR 0,2,4,5,7,8,9) TPM refused to release the device key: tpm:session(1):a policy check failed
+  FAIL  device key (signed release, PCR 4,5,8,9) TPM refused to release the device key: tpm:parameter(1):value is out of range or is not correct for the context
        CHANGED  PCR 8  /system/lib/libtss2-rc.so.1
                   expected 80d9b3a872e6fd2a…  got 47e2bd83886f8d92…
 (exit 2)
@@ -108,11 +110,11 @@ started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.lo
   pass  event log (PCR 9)            log replays to the quoted PCR
   FAIL  system and /etc (PCR 8)      1 difference(s) from the release
   FAIL  applications (PCR 9)         1 difference(s) from the release
-  FAIL  device key (PCR 0,2,4,5,7,8,9) TPM refused to release the device key: tpm:session(1):a policy check failed
+  FAIL  device key (signed release, PCR 4,5,8,9) TPM refused to release the device key: tpm:parameter(1):value is out of range or is not correct for the context
        CHANGED  PCR 8  /system/bin/witnessd
-                  expected 9a3a0fbe106c047f…  got 81e2295690156ab7…
+                  expected 7bff15e41a6f9e30…  got 6e65c697ab0ad077…
        CHANGED  PCR 9  /system/bin/witnessd
-                  expected 9a3a0fbe106c047f…  got 81e2295690156ab7…
+                  expected 7bff15e41a6f9e30…  got 6e65c697ab0ad077…
 (exit 2)
 ==> restoring the released files
 started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
@@ -131,7 +133,7 @@ started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.lo
   pass  event log (PCR 9)            log replays to the quoted PCR
   FAIL  system and /etc (PCR 8)      1 difference(s) from the release
   pass  applications (PCR 9)         1 measurement(s) match the release
-  FAIL  device key (PCR 0,2,4,5,7,8,9) TPM refused to release the device key: tpm:session(1):a policy check failed
+  FAIL  device key (signed release, PCR 4,5,8,9) TPM refused to release the device key: tpm:parameter(1):value is out of range or is not correct for the context
        CHANGED  PCR 8  /data/var/etc/settings/network
                   expected 0d608d58383efbc0…  got 7e8e416fbe0bfe11…
 (exit 2)
@@ -149,4 +151,23 @@ started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.lo
   pass  event log (PCR 9)            log replays to the quoted PCR
   pass  system and /etc (PCR 8)      253 measurement(s) match the release
   pass  applications (PCR 9)         1 measurement(s) match the release
-  pass  device key (PCR 0,2,4,5,7,8,9) TPM released the key bound to the released boot state; it signed our nonce
+  pass  device key (signed release, PCR 4,5,8,9) TPM released the key bound to the released boot state; it signed our nonce
+==> build host: release v2 hardens sshd (MaxAuthTries 3); reference computed and signed with the release key
+wrote <repo>/.work/reference-v2.json.policy: release PCR policy signed for PCR 4,5,8,9
+wrote <repo>/.work/reference-v2.json: boot=uefi PCR4=9940a1522289… PCR5=c7aeb51bdf7a… PCR8=c04534d0f009… PCR9=1bef31528005…, 253 PCR 8 + 1 PCR 9 expected events, 252 files
+==> device: the update agent installs the file and the signed v2 policy, then reboots
+==> delivering the signed release policy to /data/var/witness/release-policy
+started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
+127.0.0.1:10023  TRUSTED   device key: released (proven by TPM signature)
+  pass  attestation key              AK 59a38e285aa23b6e
+  pass  quote signature              ECDSA P-256 over TPMS_ATTEST
+  pass  freshness                    quote carries this request's nonce
+  pass  PCR values                   PCR 0-9 match the signed digest
+  pass  boot disk layout (PCR 5)     GPT partition table is the released disk image's
+  pass  firmware (PCR 0,1,2,3,6,7)   same firmware and configuration as at enrollment
+  pass  boot image (PCR 4)           IFS is the released ifs.bin (Authenticode, measured by UEFI firmware)
+  pass  event log (PCR 8)            log replays to the quoted PCR
+  pass  event log (PCR 9)            log replays to the quoted PCR
+  pass  system and /etc (PCR 8)      253 measurement(s) match the release
+  pass  applications (PCR 9)         1 measurement(s) match the release
+  pass  device key (signed release, PCR 4,5,8,9) TPM released the key bound to the released boot state; it signed our nonce
