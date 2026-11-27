@@ -5,13 +5,17 @@
  *       -> libtss2-tcti-witness -> dev-tpm-tis /dev/tpm0 -> TPM
  *
  * On start it derives the attestation key (AK: ECC P-256, restricted signing, from the endorsement
- * hierarchy, so the same key comes back on every boot of the same TPM) and tries to unseal the
- * device secret, which is sealed to PCR 4 (IFS, measured by firmware) and PCR 8 (system partition).
- * If no sealed secret exists yet (first boot in the factory), it creates one.
+ * hierarchy, so the same key comes back on every boot of the same TPM) and loads the device key: an
+ * ECC P-256 signing key whose only authorisation is PolicyPCR over PCR 0,2,4,5,7,8,9 (firmware, boot
+ * image, disk, system partition, applications). The TPM lets it sign only in the provisioned boot
+ * state, so a signature with it over the verifier's nonce proves that state, and a fleet service can
+ * use it as the device's credential. If no device key exists yet (first boot in the factory), it
+ * creates one.
  *
  * Protocol (TCP, one request per connection):  "ATTEST <nonce-hex>\n"  ->  one JSON object
  *   ak_public  TPM2B_PUBLIC (hex)     quote      TPMS_ATTEST (hex)    signature  TPMT_SIGNATURE (hex)
- *   pcrs       PCR 0-9 (sha256, hex)  eventlog   Witness event log    sealed     unsealed|locked|error */
+ *   pcrs       PCR 0-9 (sha256, hex)  eventlog   Witness event log    sealed     unsealed|locked|error
+ *   device_key {public, signature over SHA256("witness:device-key:" nonce)} or device_key_error */
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -32,11 +36,14 @@
 
 #define DEFAULT_PORT 7650
 #define QUOTE_PCR_MASK 0x0003FF /* PCR 0-9 */
-#define SEAL_PCR_MASK 0x000110  /* PCR 4 (IFS via firmware) and PCR 8 (system partition) */
+#define SEAL_PCR_MASK 0x0003B5  /* PCR 0,2,4,5,7 (firmware, boot image, disk, Secure Boot), 8 (system), 9 (apps) */
+#define DEVICE_KEY_LABEL "witness:device-key:"
 
 static ESYS_CONTEXT *esys;
 static ESYS_TR attestation_key = ESYS_TR_NONE;
 static TPM2B_PUBLIC *attestation_key_public;
+static ESYS_TR device_key = ESYS_TR_NONE;
+static TPM2B_PUBLIC device_key_public;
 static const char *eventlog_path = "/dev/shmem/witness/eventlog";
 static const char *state_dir = "/data/var/witness";
 static const char *sealed_state = "none";
@@ -135,11 +142,11 @@ static int write_blob(const char *path, const uint8_t *data, size_t size)
     return ok && rename(tmp, path) == 0 ? 0 : -1;
 }
 
-/* First boot: seal 32 random bytes from the TPM to PCR 4 + 8. */
-static TSS2_RC seal_new_secret(ESYS_TR storage_key, const char *blob_path)
+/* First boot: a P-256 signing key, created inside the TPM, usable only through PolicyPCR over SEAL_PCR_MASK. */
+static TSS2_RC create_device_key(ESYS_TR storage_key, const char *blob_path)
 {
     ESYS_TR trial;
-    TPM2B_DIGEST *policy = NULL, *random_bytes = NULL;
+    TPM2B_DIGEST *policy = NULL;
     TPM2B_PRIVATE *sealed_private = NULL;
     TPM2B_PUBLIC *sealed_public = NULL;
     TSS2_RC rc = pcr_policy_session(TPM2_SE_TRIAL, &trial);
@@ -149,25 +156,28 @@ static TSS2_RC seal_new_secret(ESYS_TR storage_key, const char *blob_path)
     Esys_FlushContext(esys, trial);
     if (rc != TSS2_RC_SUCCESS)
         return rc;
-    if ((rc = Esys_GetRandom(esys, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, 32, &random_bytes)) != TSS2_RC_SUCCESS)
-        goto out;
 
-    TPM2B_SENSITIVE_CREATE sensitive = {.sensitive.data.size = random_bytes->size};
-    memcpy(sensitive.sensitive.data.buffer, random_bytes->buffer, random_bytes->size);
+    TPM2B_SENSITIVE_CREATE sensitive = {0};
     TPM2B_PUBLIC template = {
         .publicArea = {
-            .type = TPM2_ALG_KEYEDHASH,
+            .type = TPM2_ALG_ECC,
             .nameAlg = TPM2_ALG_SHA256,
-            .objectAttributes = TPMA_OBJECT_FIXEDTPM | TPMA_OBJECT_FIXEDPARENT, /* policy-only: no userWithAuth */
+            /* policy-only (no userWithAuth): the PCR policy is the sole way to use it */
+            .objectAttributes = TPMA_OBJECT_FIXEDTPM | TPMA_OBJECT_FIXEDPARENT | TPMA_OBJECT_SENSITIVEDATAORIGIN |
+                                TPMA_OBJECT_SIGN_ENCRYPT,
             .authPolicy = *policy,
-            .parameters.keyedHashDetail.scheme.scheme = TPM2_ALG_NULL,
+            .parameters.eccDetail = {
+                .symmetric.algorithm = TPM2_ALG_NULL,
+                .scheme = {.scheme = TPM2_ALG_ECDSA, .details.ecdsa.hashAlg = TPM2_ALG_SHA256},
+                .curveID = TPM2_ECC_NIST_P256,
+                .kdf.scheme = TPM2_ALG_NULL,
+            },
         },
     };
     TPM2B_DATA outside_info = {0};
     TPML_PCR_SELECTION creation_pcr = {0};
     rc = Esys_Create(esys, storage_key, ESYS_TR_PASSWORD, ESYS_TR_NONE, ESYS_TR_NONE, &sensitive, &template,
                      &outside_info, &creation_pcr, &sealed_private, &sealed_public, NULL, NULL, NULL);
-    memset(&sensitive, 0, sizeof sensitive);
     if (rc != TSS2_RC_SUCCESS)
         goto out;
 
@@ -181,16 +191,41 @@ static TSS2_RC seal_new_secret(ESYS_TR storage_key, const char *blob_path)
         rc = TSS2_BASE_RC_IO_ERROR;
     }
 out:
-    if (random_bytes)
-        memset(random_bytes->buffer, 0, random_bytes->size);
-    Esys_Free(random_bytes);
     Esys_Free(policy);
     Esys_Free(sealed_private);
     Esys_Free(sealed_public);
     return rc;
 }
 
-static TSS2_RC unseal_secret(ESYS_TR storage_key, const char *blob_path, uint8_t fingerprint[8])
+/* Sign SHA256(DEVICE_KEY_LABEL || data) with the device key; the TPM refuses unless the PCR policy holds. */
+static TSS2_RC device_key_sign(const uint8_t *data, size_t size, TPMT_SIGNATURE **signature)
+{
+    uint8_t message[sizeof DEVICE_KEY_LABEL - 1 + sizeof(TPM2B_DATA)];
+    TPM2B_MAX_BUFFER buffer = {.size = (UINT16)(sizeof DEVICE_KEY_LABEL - 1 + size)};
+    TPM2B_DIGEST *digest = NULL;
+    TPMT_TK_HASHCHECK *ticket = NULL;
+    if (device_key == ESYS_TR_NONE || size > sizeof(TPM2B_DATA))
+        return TSS2_ESYS_RC_BAD_VALUE;
+    memcpy(message, DEVICE_KEY_LABEL, sizeof DEVICE_KEY_LABEL - 1);
+    memcpy(message + sizeof DEVICE_KEY_LABEL - 1, data, size);
+    memcpy(buffer.buffer, message, buffer.size);
+    TSS2_RC rc = Esys_Hash(esys, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, &buffer, TPM2_ALG_SHA256, ESYS_TR_RH_NULL,
+                           &digest, &ticket);
+    if (rc != TSS2_RC_SUCCESS)
+        return rc;
+    ESYS_TR session;
+    rc = pcr_policy_session(TPM2_SE_POLICY, &session);
+    if (rc == TSS2_RC_SUCCESS) {
+        TPMT_SIG_SCHEME scheme = {.scheme = TPM2_ALG_NULL}; /* the key's own ECDSA-SHA256 */
+        rc = Esys_Sign(esys, device_key, session, ESYS_TR_NONE, ESYS_TR_NONE, digest, &scheme, ticket, signature);
+        Esys_FlushContext(esys, session);
+    }
+    Esys_Free(digest);
+    Esys_Free(ticket);
+    return rc;
+}
+
+static TSS2_RC load_device_key(ESYS_TR storage_key, const char *blob_path)
 {
     uint8_t blob[sizeof(TPM2B_PRIVATE) + sizeof(TPM2B_PUBLIC)];
     int fd = open(blob_path, O_RDONLY);
@@ -210,42 +245,24 @@ static TSS2_RC unseal_secret(ESYS_TR storage_key, const char *blob_path, uint8_t
     if (rc != TSS2_RC_SUCCESS)
         return rc;
 
-    ESYS_TR sealed_object, session;
     rc = Esys_Load(esys, storage_key, ESYS_TR_PASSWORD, ESYS_TR_NONE, ESYS_TR_NONE, &sealed_private, &sealed_public,
-                   &sealed_object);
+                   &device_key);
     if (rc != TSS2_RC_SUCCESS) {
-        fail("load sealed object", rc);
+        fail("load device key", rc);
+        device_key = ESYS_TR_NONE;
         return rc;
     }
-    rc = pcr_policy_session(TPM2_SE_POLICY, &session);
-    if (rc != TSS2_RC_SUCCESS)
-        fail("policy session", rc);
-    if (rc == TSS2_RC_SUCCESS) {
-        TPM2B_SENSITIVE_DATA *secret = NULL;
-        rc = Esys_Unseal(esys, sealed_object, session, ESYS_TR_NONE, ESYS_TR_NONE, &secret);
-        if (rc != TSS2_RC_SUCCESS)
-            fail("unseal", rc);
-        Esys_FlushContext(esys, session);
-        if (rc == TSS2_RC_SUCCESS) {
-            /* The secret itself never leaves the device; report a short fingerprint only. */
-            for (int i = 0; i < 8; i++)
-                fingerprint[i] = secret->size > i ? secret->buffer[i] ^ secret->buffer[secret->size - 1 - i] : 0;
-            memset(secret->buffer, 0, secret->size);
-            Esys_Free(secret);
-        }
-    }
-    Esys_FlushContext(esys, sealed_object);
-    return rc;
+    device_key_public = sealed_public;
+    return TSS2_RC_SUCCESS;
 }
 
-static void provision_or_unseal(void)
+static void provision_or_load(void)
 {
     char blob_path[256];
     ESYS_TR storage_key;
-    uint8_t fingerprint[8];
 
     mkdir(state_dir, 0700);
-    snprintf(blob_path, sizeof blob_path, "%s/sealed-secret.blob", state_dir);
+    snprintf(blob_path, sizeof blob_path, "%s/device-key.blob", state_dir);
     TSS2_RC rc = create_storage_key(&storage_key);
     if (rc != TSS2_RC_SUCCESS) {
         fail("storage key", rc);
@@ -253,22 +270,26 @@ static void provision_or_unseal(void)
         return;
     }
     if (access(blob_path, F_OK) != 0) {
-        rc = seal_new_secret(storage_key, blob_path);
+        rc = create_device_key(storage_key, blob_path);
         if (rc != TSS2_RC_SUCCESS)
-            fail("seal", rc);
+            fail("create device key", rc);
         else
-            fprintf(stderr, "witnessd: provisioned: device secret sealed to PCR 4+8\n");
+            fprintf(stderr, "witnessd: provisioned: device key bound to PCR 0,2,4,5,7,8,9\n");
     }
-    rc = unseal_secret(storage_key, blob_path, fingerprint);
+    rc = load_device_key(storage_key, blob_path);
+    Esys_FlushContext(esys, storage_key);
+    TPMT_SIGNATURE *probe = NULL;
+    if (rc == TSS2_RC_SUCCESS)
+        rc = device_key_sign((const uint8_t *)"boot", 4, &probe);
+    Esys_Free(probe);
     if (rc == TSS2_RC_SUCCESS) {
         sealed_state = "unsealed";
-        fprintf(stderr, "witnessd: device secret unsealed (PCR 4+8 match the provisioned state)\n");
+        fprintf(stderr, "witnessd: device key released (boot state matches the provisioned state)\n");
     } else {
         sealed_state = "locked"; /* fail closed whatever the reason */
-        fprintf(stderr, "witnessd: device secret LOCKED: boot state differs from provisioning (%s)\n",
+        fprintf(stderr, "witnessd: device key LOCKED: boot state differs from provisioning (%s)\n",
                 Tss2_RC_Decode(rc));
     }
-    Esys_FlushContext(esys, storage_key);
 }
 
 static void hex(FILE *out, const uint8_t *data, size_t size)
@@ -378,6 +399,23 @@ static void answer(FILE *out, const char *request)
         fprintf(out, "\"pcrs_error\":true,");
     fprintf(out, "\"sealed\":");
     json_string(out, sealed_state);
+    TPMT_SIGNATURE *device_signature = NULL;
+    rc = device_key_sign(nonce.buffer, nonce.size, &device_signature);
+    if (rc == TSS2_RC_SUCCESS) {
+        fprintf(out, ",\"device_key\":{\"public\":\"");
+        offset = 0;
+        if (Tss2_MU_TPM2B_PUBLIC_Marshal(&device_key_public, buffer, sizeof buffer, &offset) == TSS2_RC_SUCCESS)
+            hex(out, buffer, offset);
+        fprintf(out, "\",\"signature\":\"");
+        offset = 0;
+        if (Tss2_MU_TPMT_SIGNATURE_Marshal(device_signature, buffer, sizeof buffer, &offset) == TSS2_RC_SUCCESS)
+            hex(out, buffer, offset);
+        fprintf(out, "\"}");
+    } else {
+        fprintf(out, ",\"device_key_error\":");
+        json_string(out, Tss2_RC_Decode(rc));
+    }
+    Esys_Free(device_signature);
     fprintf(out, ",\"eventlog\":[");
     FILE *log = fopen(eventlog_path, "r");
     char line[1200];
@@ -410,7 +448,7 @@ static void serve(int port)
         int client = accept(listener, NULL, NULL);
         if (client < 0)
             continue;
-        struct timeval timeout = {.tv_sec = 5};
+        struct timeval timeout = {.tv_sec = 1}; /* one slow client must not stall the next */
         setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof timeout);
         /* separate streams: C forbids switching one stream from reading to writing without a seek */
         FILE *input = fdopen(client, "r");
@@ -455,7 +493,7 @@ int main(int argc, char **argv)
         fail("attestation key", rc);
         return EXIT_FAILURE;
     }
-    provision_or_unseal();
+    provision_or_load();
     if (!foreground && fork() > 0)
         return EXIT_SUCCESS;
     serve(port);

@@ -38,7 +38,8 @@ def enrollment_path(directory: str, device: str) -> str:
 def print_verdict(verdict, device: str) -> None:
     color = GREEN if verdict.trusted else RED
     print(f"{BOLD}{device}{RESET}  {color}{BOLD}{'TRUSTED' if verdict.trusted else 'NOT TRUSTED'}{RESET}"
-          f"   device secret: {verdict.sealed} {DIM}(reported by agent){RESET}")
+          f"   device key: {'released' if verdict.sealed == 'unsealed' else verdict.sealed} "
+          f"{DIM}({'proven by TPM signature' if verdict.sealed_proven else 'reported by agent'}){RESET}")
     for check in verdict.checks:
         mark = f"{GREEN}pass{RESET}" if check.ok else f"{RED}FAIL{RESET}"
         print(f"  {mark}  {check.name:<28} {DIM}{check.detail}{RESET}")

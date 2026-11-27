@@ -39,6 +39,9 @@ CHAIN = [
      "Every measured file on /system matches the release.", ("system partition",)),
     ("apps", "Applications", "9",
      "Every measured application matches the release.", ("applications",)),
+    ("key", "Device key", "0, 2, 4, 5, 7-9",
+     "The TPM released the device's own key, which it allows only in the released boot state, and the key signed "
+     "this request.", ("device key",)),
 ]
 KIND_TEXT = {
     "changed": "changed since the release",
@@ -184,7 +187,8 @@ class Fleet:
                        "findings": []}
         findings = [describe(f) for f in verdict["findings"]]
         result = {"state": "trusted" if verdict["trusted"] else "not trusted", "trusted": verdict["trusted"],
-                  "sealed": verdict["sealed"], "checks": verdict["checks"], "findings": findings,
+                  "sealed": verdict["sealed"], "sealed_proven": verdict.get("sealed_proven", False),
+                  "checks": verdict["checks"], "findings": findings,
                   "chain": chain_steps(verdict["checks"], enrollment is not None, findings),
                   "agent_device": attestation.get("device")}
         try:
@@ -205,7 +209,8 @@ class Fleet:
         return {"name": device.name, "address": device.address,
                 "evidence": os.path.basename(device.evidence) if device.evidence else None,
                 "state": latest.get("state", "checking"), "trusted": latest.get("trusted"),
-                "sealed": latest.get("sealed"), "ak_fingerprint": latest.get("ak_fingerprint"),
+                "sealed": latest.get("sealed"), "sealed_proven": latest.get("sealed_proven", False),
+                "ak_fingerprint": latest.get("ak_fingerprint"),
                 "enrolled": latest.get("enrolled"), "time": latest.get("time"), "error": latest.get("error"),
                 "failed_check": next((f"{c['name']}: {c['detail']}" for c in latest.get("checks", []) if not c["ok"]), None),
                 "findings": latest.get("findings", []), "history": list(device.history)}

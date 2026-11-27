@@ -8,6 +8,7 @@ from conftest import ak_public_blob, flip, forge, signature_blob
 from witness.verify import appraise, enrollment_from, parse_eventlog
 
 SSHD_CONFIG = "/system/etc/ssh/sshd_config"
+DEVICE_KEY = "device key (PCR 0,2,4,5,7,8,9)"
 
 
 def checks(verdict) -> dict:
@@ -65,7 +66,7 @@ def test_tampered_config_named(tampered, reference, enrollment):
     actual = next(line.split()[1] for line in tampered["attestation"]["eventlog"] if line.endswith(SSHD_CONFIG))
     assert verdict.findings == [{"pcr": 8, "kind": "changed", "what": SSHD_CONFIG,
                                  "expected": expected, "actual": actual}]
-    assert failed(verdict) == ["system partition (PCR 8)"]
+    assert failed(verdict) == ["system partition (PCR 8)", DEVICE_KEY]
     assert verdict.sealed == "locked"
 
 
@@ -260,7 +261,7 @@ def test_firmware_change_named(good, reference, enrollment):
     enrollment["firmware_pcrs"]["0"] = "00" * 32
     verdict = appraise(good["attestation"], good["nonce"], reference, enrollment)
     assert not verdict.trusted
-    assert failed(verdict) == ["firmware (PCR 0,1,2,3,6,7)"]
+    assert failed(verdict) == ["firmware (PCR 0,1,2,3,6,7)", DEVICE_KEY]  # the key is bound to PCR 0 too
     assert verdict.findings == [{"pcr": 0, "kind": "firmware", "what": "PCR 0 differs from enrollment"}]
 
 
@@ -268,7 +269,7 @@ def test_boot_image_mismatch_named(good, reference, enrollment):
     reference["pcr"]["4"] = "00" * 32
     verdict = appraise(good["attestation"], good["nonce"], reference, enrollment)
     assert not verdict.trusted
-    assert failed(verdict) == ["boot image (PCR 4)"]
+    assert failed(verdict) == ["boot image (PCR 4)", DEVICE_KEY]
     assert [(f["pcr"], f["kind"]) for f in verdict.findings] == [(4, "changed")]
 
 
@@ -276,7 +277,7 @@ def test_boot_disk_mismatch_named(good, reference, enrollment):
     reference["pcr"]["5"] = "00" * 32
     verdict = appraise(good["attestation"], good["nonce"], reference, enrollment)
     assert not verdict.trusted
-    assert failed(verdict) == ["boot disk layout (PCR 5)"]
+    assert failed(verdict) == ["boot disk layout (PCR 5)", DEVICE_KEY]
     assert [(f["pcr"], f["kind"]) for f in verdict.findings] == [(5, "changed")]
 
 
@@ -297,3 +298,30 @@ def test_signature_blob_builder_matches_real_layout(good):
     blob = signature_blob(ec.generate_private_key(ec.SECP256R1()), b"x")
     real = bytes.fromhex(good["attestation"]["signature"])
     assert blob[:6] == real[:6] and len(blob) == len(real)
+
+
+# --- device key: TPM-held, PCR-bound, signs the nonce ---
+
+def test_device_key_proves_release_state(good, reference, enrollment):
+    verdict = appraise(good["attestation"], good["nonce"], reference, enrollment)
+    assert checks(verdict)[DEVICE_KEY] is True and verdict.sealed_proven and verdict.sealed == "unsealed"
+
+
+def test_withheld_device_key_fails(good, reference, enrollment):
+    attestation = {k: v for k, v in good["attestation"].items() if k != "device_key"}
+    assert failed(appraise(attestation, good["nonce"], reference, enrollment)) == [DEVICE_KEY]
+
+
+def test_device_key_signature_must_cover_this_nonce(good, reference, enrollment):
+    attestation = dict(good["attestation"], device_key=dict(good["attestation"]["device_key"]))
+    attestation["device_key"]["signature"] = flip(attestation["device_key"]["signature"], 40)
+    assert failed(appraise(attestation, good["nonce"], reference, enrollment)) == [DEVICE_KEY]
+
+
+def test_key_without_pcr_policy_is_not_bound(good, reference):
+    # a key re-provisioned outside the released state (here: the AK, which has no PCR policy) is rejected
+    attestation = dict(good["attestation"], device_key=dict(good["attestation"]["device_key"],
+                                                            public=good["attestation"]["ak_public"]))
+    verdict = appraise(attestation, good["nonce"], reference, None, enrolling=True)
+    assert failed(verdict) == [DEVICE_KEY]
+    assert "not bound" in next(c.detail for c in verdict.checks if c.name == DEVICE_KEY)

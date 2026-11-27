@@ -12,9 +12,12 @@ Trust chain checked, in order:
 import hashlib
 from dataclasses import dataclass, field
 
-from .tpm import extend, parse_public, parse_quote, signature_valid, TPM_ALG_SHA256
+from .tpm import (extend, parse_public, parse_quote, pcr_policy_digest, signature_valid, TPM_ALG_SHA256,
+                  TPMA_OBJECT_FIXEDTPM, TPMA_OBJECT_USERWITHAUTH)
 
 FIRMWARE_PCRS = [0, 1, 2, 3, 5, 6, 7]
+DEVICE_KEY_PCRS = (0, 2, 4, 5, 7, 8, 9)  # witnessd SEAL_PCR_MASK
+DEVICE_KEY_LABEL = b"witness:device-key:"
 
 
 @dataclass
@@ -30,9 +33,10 @@ class Verdict:
     checks: list[Check] = field(default_factory=list)
     findings: list[dict] = field(default_factory=list)  # named differences, for people
     sealed: str = "unknown"
+    sealed_proven: bool = False  # True when the device-key signature, not the agent's word, sets `sealed`
 
     def to_dict(self) -> dict:
-        return {"trusted": self.trusted, "sealed": self.sealed,
+        return {"trusted": self.trusted, "sealed": self.sealed, "sealed_proven": self.sealed_proven,
                 "checks": [c.__dict__ for c in self.checks], "findings": self.findings}
 
 
@@ -154,8 +158,40 @@ def _appraise(attestation: dict, nonce: bytes, reference: dict, enrollment: dict
         add(Check(label, ok, f"{len(actual)} measurement(s) match the release" if ok
                   else f"{len(verdict.findings) - before} difference(s) from the release"))
 
+    if enrolling or (enrollment and "device_key" in enrollment):
+        _check_device_key(verdict, attestation, nonce, reference, enrollment, pcrs)
+
     verdict.trusted = all(c.ok for c in verdict.checks)
     return verdict
+
+
+def _check_device_key(verdict: Verdict, attestation: dict, nonce: bytes, reference: dict,
+                      enrollment: dict | None, pcrs: dict[int, bytes]) -> None:
+    """The device key is usable only through PolicyPCR over the released state; its signature over our nonce
+    proves the TPM released it now. Its authPolicy must be exactly that policy, computed here from the release
+    (PCR 4, 5, 8, 9) and the enrolled firmware (PCR 0, 2, 7), so a key re-provisioned on a tampered boot fails."""
+    name = f"device key (PCR {','.join(map(str, DEVICE_KEY_PCRS))})"
+    device_key = attestation.get("device_key")
+    if not isinstance(device_key, dict):
+        verdict.checks.append(Check(name, False, "TPM refused to release the device key: "
+                                    + str(attestation.get("device_key_error", "not reported"))))
+        verdict.sealed = "locked"
+        return
+    key = parse_public(bytes.fromhex(device_key["public"]))
+    firmware = enrollment["firmware_pcrs"] if enrollment else {str(i): pcrs[i].hex() for i in FIRMWARE_PCRS}
+    released = {i: bytes.fromhex(reference["pcr"][str(i)] if str(i) in reference["pcr"] else firmware[str(i)])
+                for i in DEVICE_KEY_PCRS}
+    bound = key.auth_policy == pcr_policy_digest(released) and key.attributes & TPMA_OBJECT_FIXEDTPM \
+        and not key.attributes & TPMA_OBJECT_USERWITHAUTH
+    enrolled = not enrollment or enrollment.get("device_key") in (None, device_key["public"])
+    signed = signature_valid(key, DEVICE_KEY_LABEL + nonce, bytes.fromhex(device_key["signature"]))
+    ok = bool(bound and enrolled and signed)
+    verdict.checks.append(Check(name, ok, "TPM released the key bound to the released boot state; it signed our nonce"
+                                if ok else "key is not bound to the released state" if not bound
+                                else "key differs from the enrolled one: re-provisioned" if not enrolled
+                                else "signature over our nonce is invalid"))
+    verdict.sealed = "unsealed" if ok else "locked"
+    verdict.sealed_proven = True
 
 
 def enrollment_from(attestation: dict) -> dict:
@@ -163,4 +199,5 @@ def enrollment_from(attestation: dict) -> dict:
     pcrs = attestation["pcrs"]
     return {"ak_public": attestation["ak_public"],
             "firmware_pcrs": {str(i): pcrs[str(i)] for i in FIRMWARE_PCRS},
-            "pcr4": pcrs["4"], "device": attestation.get("device", "")}
+            "pcr4": pcrs["4"], "device": attestation.get("device", ""),
+            **({"device_key": attestation["device_key"]["public"]} if "device_key" in attestation else {})}

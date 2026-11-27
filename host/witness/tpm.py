@@ -64,6 +64,8 @@ class EccPublicKey:
     x: bytes
     y: bytes
     name: bytes  # TPM object name: nameAlg || H(TPMT_PUBLIC)
+    attributes: int = 0  # TPMA_OBJECT
+    auth_policy: bytes = b""
 
     def key(self) -> ec.EllipticCurvePublicKey:
         if self.curve != TPM_ECC_NIST_P256:
@@ -83,8 +85,8 @@ def parse_public(blob: bytes) -> EccPublicKey:
     key_type, name_alg = reader.u16(), reader.u16()
     if key_type != TPM_ALG_ECC:
         raise ValueError("attestation key is not ECC")
-    reader.u32()  # objectAttributes
-    reader.tpm2b()  # authPolicy
+    attributes = reader.u32()
+    auth_policy = reader.tpm2b()
     symmetric = reader.u16()
     if symmetric != TPM_ALG_NULL:
         reader.u16(); reader.u16()
@@ -99,7 +101,19 @@ def parse_public(blob: bytes) -> EccPublicKey:
     if name_alg != TPM_ALG_SHA256:
         raise ValueError("unexpected nameAlg")
     name = struct.pack(">H", name_alg) + hashlib.sha256(area).digest()
-    return EccPublicKey(curve, x, y, name)
+    return EccPublicKey(curve, x, y, name, attributes, auth_policy)
+
+
+TPMA_OBJECT_FIXEDTPM, TPMA_OBJECT_USERWITHAUTH = 0x2, 0x40
+TPM_CC_POLICY_PCR = 0x17F
+
+
+def pcr_policy_digest(values: dict[int, bytes]) -> bytes:
+    """The authPolicy of an object whose only authorisation is TPM2_PolicyPCR over these SHA-256 PCR values."""
+    mask = sum(1 << i for i in values)
+    selection = struct.pack(">IHB", 1, TPM_ALG_SHA256, 3) + mask.to_bytes(3, "little")
+    pcr_digest = hashlib.sha256(b"".join(values[i] for i in sorted(values))).digest()
+    return hashlib.sha256(bytes(32) + struct.pack(">I", TPM_CC_POLICY_PCR) + selection + pcr_digest).digest()
 
 
 @dataclass

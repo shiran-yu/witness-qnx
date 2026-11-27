@@ -31,7 +31,7 @@
 </main>
 <footer class="wrap footer">
   <p>Witness checks each device's TPM 2.0 quote and event log against reference values computed from the build output of the released image.
-  The device secret state is reported by the on-device agent; it is shown for information and is not part of the signed quote.</p>
+  Each device also signs the request with its device key, which its TPM releases only in the released boot state.</p>
 </footer>
 <div id="announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 <script src="/static/app.js"></script>

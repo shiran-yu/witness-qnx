@@ -15,10 +15,12 @@ signature from the TPM, three questions:
 3. **If not, what changed?** The verifier replays the event log and names the file:
    `CHANGED PCR 8 /system/etc/ssh/sshd_config`.
 
-A device secret sealed to the boot state is released only when PCR 4 and PCR 8 match the
-provisioned state, so a tampered device locks itself out of its own credentials. A QNX security
-policy confines the TPM: even `root` logged in over ssh cannot open `/dev/tpm0` or `/dev/tpmrm0`,
-so it cannot extend PCRs, use the attestation key or unseal the secret.
+Each device also holds a **device key**, created inside its TPM, that the TPM lets it use only when PCR
+0, 2, 4, 5, 7, 8 and 9 (firmware, boot image, disk, system partition, applications) equal the released
+state. The key signs every attestation request, and the verifier checks that its TPM policy is
+exactly the released state, computed from the build, so a tampered device loses its own credential
+and cannot fake having it. A QNX security policy confines the TPM: even `root` logged in over ssh
+cannot open `/dev/tpm0` or `/dev/tpmrm0`, so it cannot extend PCRs or use either key.
 
 Everything below runs on QNX 8.0 under QEMU (x86_64, UEFI) with a software TPM (swtpm) attached
 through the standard TPM TIS interface, the same register interface a discrete TPM chip exposes.
@@ -32,7 +34,7 @@ through the standard TPM TIS interface, the same register interface a discrete T
  ├─ post_start: tabrm (QNX TCG resource manager) → /dev/tpmrm0
  │              over libtss2-tcti-witness → /dev/tpm0
  ├─ witness-measure → applications, before launch .................... PCR 9
- └─ witnessd (tss2 ESYS): AK, quote PCR 0-9, sealed device secret, TCP 7650
+ └─ witnessd (tss2 ESYS): AK, quote PCR 0-9, PCR-bound device key, TCP 7650
                                   │
  host: witness verify ────────────┘  signature, nonce, PCRs, event-log replay, per-file findings
 ```
@@ -65,7 +67,7 @@ demo/demo.sh down
 ### What you should see
 
 ```
-127.0.0.1:10023  TRUSTED   device secret: unsealed
+127.0.0.1:10023  TRUSTED   device key: released (proven by TPM signature)
   pass  attestation key              AK 59a38e285aa23b6e
   pass  quote signature              ECDSA P-256 over TPMS_ATTEST
   pass  freshness                    quote carries this request's nonce
@@ -77,6 +79,7 @@ demo/demo.sh down
   pass  event log (PCR 9)            log replays to the quoted PCR
   pass  system partition (PCR 8)     256 measurement(s) match the release
   pass  applications (PCR 9)         1 measurement(s) match the release
+  pass  device key (PCR 0,2,4,5,7,8,9) TPM released the key bound to the released boot state; it signed our nonce
 ```
 
 `demo.sh attack` (root shell on the device, secure policy):
@@ -93,14 +96,15 @@ on: Operation not permitted (/proc/boot/witness-measure)
 After `tamper config` and a reboot:
 
 ```
-127.0.0.1:10023  NOT TRUSTED   device secret: locked
+127.0.0.1:10023  NOT TRUSTED   device key: locked (reported by agent)
   FAIL  system partition (PCR 8)     1 difference(s) from the release
+  FAIL  device key (PCR 0,2,4,5,7,8,9) TPM refused to release the device key: tpm:session(1):a policy check failed
        CHANGED  PCR 8  /system/etc/ssh/sshd_config
                   expected 4e2e95dc5d0f3652…  got 294c7dd0399bfc3a…
 ```
 
 After `tamper lib` (a modified `libtss2-rc.so.1`, loaded by `witnessd` and `tabrm`):
-`CHANGED PCR 8 /system/lib/libtss2-rc.so.1`, device secret locked. After `tamper app` (the attestation
+`CHANGED PCR 8 /system/lib/libtss2-rc.so.1`, device key locked. After `tamper app` (the attestation
 agent binary replaced): `/system/bin/witnessd` changed in PCR 8 and in PCR 9.
 
 ### Fleet dashboard
@@ -126,7 +130,7 @@ stack protector, `_FORTIFY_SOURCE`).
 | Resource manager | [driver/main.c](driver/main.c) `io_write`, `io_read`, `io_notify`, `io_read_stats`, `main` | `dispatch_create`, two `resmgr_attach` paths (`/dev/tpm0`, `/dev/tpm0-stats`), custom OCB (`IOFUNC_OCB_T`, `iofunc_mount_t` ocb calloc/free) holding each client's response, `iofunc_notify` for `select`/`poll`, `procmgr_daemon` |
 | TSS2 TCTI | [tcti/tcti-witness.c](tcti/tcti-witness.c) `Tss2_Tcti_Witness_Init`, `Tss2_Tcti_Info` | standard TCTI v2 module that the QNX TCG resource manager `tabrm` loads from its config ([image/tabrm.cfg](image/tabrm.cfg)) |
 | Measurement | [tools/witness-measure.c](tools/witness-measure.c) `pcr_extend`, `measure_tree`, `measure_manifest` | runs from the IFS (`/proc/boot`), walks `/system` in sorted order (files by content, symlinks by target), raw `TPM2_PCR_Extend` through `/dev/tpm0`, event log in `/dev/shmem` |
-| Attestation agent | [agent/witnessd.c](agent/witnessd.c) `create_attestation_key`, `seal_new_secret`, `unseal_secret`, `answer` | QNX TCG stack from the SDP (`libtss2-esys`, `-mu`, `-rc`, `-tctildr` → `libtcti_tabrm` → `/dev/tpmrm0`); `TPM2_Quote`, `PolicyPCR`, `Create`/`Load`/`Unseal` |
+| Attestation agent | [agent/witnessd.c](agent/witnessd.c) `create_attestation_key`, `create_device_key`, `device_key_sign`, `answer` | QNX TCG stack from the SDP (`libtss2-esys`, `-mu`, `-rc`, `-tctildr` → `libtcti_tabrm` → `/dev/tpmrm0`); `TPM2_Quote`; device key: `Create` with a `PolicyPCR` authPolicy, `Load`, `Sign` in a policy session |
 | Boot customisation | [image/witness-image.sh](image/witness-image.sh) | `mkqnximage` snippets: driver started in the IFS script before the system partition is mounted; measurement in `startup_postfs`; `tabrm` and `witnessd` in `post_start`; IFS load address for current OVMF ([image/uefi/definitions.zz_witness](image/uefi/definitions.zz_witness)) |
 | Security policy | [image/witness.secpol](image/witness.secpol) | QNX secpol: every Witness process starts under its own type (`START_P(tpm_driver_t)` …); only `tabrm_t` and `witness_measure_t` may connect to the driver and only `witnessd_t` to `tabrm`; the driver gets exactly `mem_phys` for its 4 KiB register page and `interrupt:5`. Built with `mkqnximage --secpol=secure --policy=…` |
 | QEMU target | [scripts/vm.sh](scripts/vm.sh) | OVMF + `tpm-tis` device + swtpm, KVM when available |
@@ -149,6 +153,11 @@ commands and 40 interrupt wake-ups (interrupt mode, IRQ 5).
 - **System partition and applications** (PCR 8, 9): the event log must replay to the quoted PCR, and
   every event must match the digest of the file in the build. Differences are named per file
   (changed, missing, unexpected, not measured).
+- **Device key**: its signature over `"witness:device-key:" || nonce` must verify, it must be the
+  enrolled key, and its `authPolicy` must equal `TPM2_PolicyPCR` over the released PCR 4, 5, 8, 9
+  (from the build) and enrolled PCR 0, 2, 7, with `userWithAuth` clear. A key re-created on a
+  tampered boot is therefore rejected.
+- **Unenrolled devices** are NOT TRUSTED; only `witness enroll` accepts a new attestation key.
 
 ## Limits
 
