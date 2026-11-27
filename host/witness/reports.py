@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Signed fleet reports: the fleet service accepts a device's report only with the device key's signature.
 
 A device app (tools/witness-report.c) fetches a one-time challenge, puts it in its report, and has witnessd sign

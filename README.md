@@ -149,7 +149,7 @@ demo/demo.sh down
 ```
 
 `build` needs only the SDP; `up` needs `qemu-system-x86_64`, `swtpm` and OVMF
-(`OVMF_CODE=/path/OVMF_CODE_4M.fd` if not in `/usr/share/OVMF`). SSH to the target:
+(`SWTPM=/path/swtpm` if it is not on `PATH`, `OVMF_CODE=/path/OVMF_CODE_4M.fd` if not in `/usr/share/OVMF`). SSH to the target:
 `ssh -i .work/id_ed25519 -p 10022 root@127.0.0.1`. Host tests: `cd host && uv run --group dev pytest`.
 
 ### What you should see
@@ -199,7 +199,7 @@ witness-report: no channel to witnessd: Operation not permitted
 # echo touch /tmp/pwned > /boot/onboot                 (a boot hook; it would not be run anyway)
 sh: cannot create /boot/onboot: Read-only file system
 # swap /system/lib/libtss2-esys.so.1, then kill the agent so its supervisor restarts it
-  no effect: restarted agent 1003542 is a fork of supervisor 454676 (no exec), mapping the same 11 objects it loaded at the measured launch
+  no effect: restarted agent 974871 is a fork of supervisor 454676 (no exec), mapping the same 11 objects it loaded at the measured launch
 ```
 
 Root can write `/system` and signal the agent, so the last check matters: the supervisor restarts the agent
