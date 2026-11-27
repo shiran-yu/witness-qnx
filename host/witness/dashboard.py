@@ -135,6 +135,7 @@ class Device:
         self.name, self.address, self.evidence = name, address, evidence
         self.lock = threading.Lock()  # one verification at a time per device
         self.latest: dict | None = None
+        self.since = time.time()  # staleness baseline before the first verdict
         self.history = collections.deque(maxlen=HISTORY)
 
 
@@ -212,20 +213,26 @@ class Fleet:
     def summary(self, device: Device) -> dict:
         latest = device.latest or {}
         state, error = latest.get("state", "checking"), latest.get("error")
-        age = time.time() - latest["time"] if "time" in latest else 0
-        if age > max(3 * self.interval, 30):  # a verdict that is not being renewed is not a verdict
+        age = time.time() - latest.get("time", device.since)
+        stale = age > max(3 * self.interval, 30)  # a verdict that is not being renewed is not a verdict
+        if stale:
             state, error = "unreachable", f"no completed verification for {int(age)} s"
         return {"name": device.name, "address": device.address,
                 "evidence": os.path.basename(device.evidence) if device.evidence else None,
                 "state": state, "trusted": latest.get("trusted") and state == "trusted",
-                "sealed": latest.get("sealed"), "sealed_proven": latest.get("sealed_proven", False),
+                "sealed": None if stale else latest.get("sealed"),
+                "sealed_proven": not stale and latest.get("sealed_proven", False),
                 "ak_fingerprint": latest.get("ak_fingerprint"),
                 "enrolled": latest.get("enrolled"), "time": latest.get("time"), "error": error,
                 "failed_check": next((f"{c['name']}: {c['detail']}" for c in latest.get("checks", []) if not c["ok"]), None),
                 "findings": latest.get("findings", []), "history": list(device.history)}
 
     def detail(self, device: Device) -> dict:
-        return dict(self.summary(device), latest=device.latest)
+        summary, latest = self.summary(device), device.latest
+        if latest and summary["state"] == "unreachable" and latest.get("state") != "unreachable":
+            # stale proof is not shown as proof
+            latest = dict(latest, chain=[dict(s, status="not reached") for s in latest.get("chain", [])])
+        return dict(summary, latest=latest)
 
     def overview(self) -> dict:
         reference = self.reference
@@ -235,13 +242,16 @@ class Fleet:
                 "devices": [self.summary(d) for d in self.devices.values()]}
 
     def watch(self, stop: threading.Event) -> None:
-        while not stop.is_set():
-            workers = [threading.Thread(target=self.verify, args=(d,), daemon=True) for d in self.devices.values()]
-            for worker in workers:
-                worker.start()
-            for worker in workers:
-                worker.join()
-            stop.wait(self.interval)
+        # one loop per device: a hung device must not delay the others
+        def loop(device: Device) -> None:
+            while not stop.is_set():
+                self.verify(device)
+                stop.wait(self.interval)
+        workers = [threading.Thread(target=loop, args=(d,), daemon=True) for d in self.devices.values()]
+        for worker in workers:
+            worker.start()
+        for worker in workers:
+            worker.join()
 
 
 def handler_for(fleet: Fleet):

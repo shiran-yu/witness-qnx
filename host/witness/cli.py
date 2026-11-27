@@ -12,6 +12,7 @@ import json
 import os
 import socket
 import sys
+import time
 
 from .reference import build_reference
 from .verify import appraise, enrollment_from
@@ -27,10 +28,18 @@ def safe(text) -> str:
 
 def request_attestation(device: str, nonce: bytes, timeout: float = 20.0) -> dict:
     host, _, port = device.rpartition(":")
+    deadline = time.monotonic() + timeout  # total budget, not per read: a trickling device times out too
     with socket.create_connection((host or "127.0.0.1", int(port)), timeout=timeout) as connection:
         connection.sendall(b"ATTEST " + nonce.hex().encode() + b"\n")
         data = b""
-        while chunk := connection.recv(65536):
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError(f"no complete answer from {device} within {timeout:g} s")
+            connection.settimeout(remaining)
+            chunk = connection.recv(65536)
+            if not chunk:
+                break
             data += chunk
             if len(data) > MAX_REPLY:
                 raise ValueError(f"reply from {device} exceeds {MAX_REPLY} bytes")
@@ -88,6 +97,8 @@ def main(argv=None) -> int:
 
     args = parser.parse_args(argv)
     if args.command == "dashboard":
+        if not 1.0 <= args.interval <= 3600.0:  # also rejects nan
+            parser.error("--interval must be between 1 and 3600 seconds")
         from .dashboard import live_fleet, replay_fleet, serve
         if args.replay:
             fleet = replay_fleet(args.replay, args.reference, args.interval, args.environment)

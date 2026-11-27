@@ -339,3 +339,20 @@ def test_certification_signed_by_another_key_fails(good, reference, enrollment):
         ec.generate_private_key(ec.SECP256R1()), bytes.fromhex(attestation["device_key"]["certify"])).hex()
     verdict = appraise(attestation, good["nonce"], reference, enrollment)
     assert "not certified" in next(c.detail for c in verdict.checks if c.name == DEVICE_KEY)
+
+
+def test_failed_device_key_is_not_proven(good, reference, enrollment):
+    attestation = dict(good["attestation"], device_key=dict(good["attestation"]["device_key"]))
+    attestation["device_key"]["signature"] = flip(attestation["device_key"]["signature"], 40)
+    verdict = appraise(attestation, good["nonce"], reference, enrollment)
+    assert verdict.sealed == "locked" and not verdict.sealed_proven
+
+
+def test_unrestricted_ak_is_rejected(good, reference):
+    # bytes 6..9 of TPM2B_PUBLIC are TPMA_OBJECT; clear `restricted` (0x00010000)
+    blob = bytearray.fromhex(good["attestation"]["ak_public"])
+    blob[7] &= ~0x01
+    attestation = dict(good["attestation"], ak_public=blob.hex())
+    verdict = appraise(attestation, good["nonce"], reference, None, enrolling=True)
+    assert not verdict.trusted
+    assert "lack fixedTPM/restricted/sign" in next(c.detail for c in verdict.checks if c.name == "attestation key")

@@ -13,8 +13,9 @@ import hashlib
 from dataclasses import dataclass, field
 
 from .tpm import (extend, parse_certify, parse_public, parse_quote, pcr_policy_digest, signature_valid, TPM_ALG_SHA256,
-                  TPMA_OBJECT_FIXEDTPM, TPMA_OBJECT_USERWITHAUTH)
+                  TPMA_OBJECT_FIXEDTPM, TPMA_OBJECT_RESTRICTED, TPMA_OBJECT_SIGN, TPMA_OBJECT_USERWITHAUTH)
 
+AK_ATTRIBUTES = TPMA_OBJECT_FIXEDTPM | TPMA_OBJECT_RESTRICTED | TPMA_OBJECT_SIGN
 FIRMWARE_PCRS = [0, 1, 2, 3, 5, 6, 7]
 DEVICE_KEY_PCRS = (0, 2, 4, 5, 7, 8, 9)  # witnessd SEAL_PCR_MASK
 DEVICE_KEY_LABEL = b"witness:device-key:"
@@ -78,6 +79,9 @@ def _appraise(attestation: dict, nonce: bytes, reference: dict, enrollment: dict
         return verdict
     if enrolled_key and enrolled_key != attestation["ak_public"]:
         add(Check("attestation key", False, "key differs from the enrolled key: different TPM or replaced device"))
+        return verdict
+    if (key.attributes & AK_ATTRIBUTES) != AK_ATTRIBUTES:  # a TPM-resident restricted signing key, else quotes can be forged
+        add(Check("attestation key", False, f"AK attributes 0x{key.attributes:08x} lack fixedTPM/restricted/sign"))
         return verdict
     add(Check("attestation key", True, f"AK {key.fingerprint()}" + ("" if enrolled_key else " (enrolling now)")))
 
@@ -196,7 +200,7 @@ def _check_device_key(verdict: Verdict, attestation: dict, nonce: bytes, referen
                                 else "key is not certified by this device's attestation key" if not certified
                                 else "signature over our nonce is invalid"))
     verdict.sealed = "unsealed" if ok else "locked"
-    verdict.sealed_proven = True
+    verdict.sealed_proven = ok  # only a passing check proves anything
 
 
 def enrollment_from(attestation: dict) -> dict:
