@@ -277,7 +277,7 @@
   function factsHTML(d, latest, data) {
     const q = latest?.quote;
     return `<dl class="facts wide">
-      <dt>Device key</dt><dd>${secret(d.sealed)}<span class="hint">${!d.sealed_proven ? 'Reported by the agent, not proven by a signature.' : d.sealed === 'unsealed' ? 'Proven: the key signed this request, and its TPM policy binds it to the released PCR 0, 2, 4, 5, 7, 8 and 9.' : 'Proven: the key signed this request, but the device booted an older signed release, not the current one.'}</span></dd>
+      <dt>Device key</dt><dd>${secret(d.sealed)}<span class="hint">${!d.sealed_proven ? 'Reported by the agent, not proven by a signature.' : d.sealed === 'unsealed' ? 'Proven: the key signed this request, and its TPM policy binds it to this device\'s firmware (PCR 0, 2, 7) and the signed release (PCR 4, 5, 8, 9).' : 'Proven: the key signed this request, but the device booted an older signed release, not the current one.'}</span></dd>
       <dt>Attestation key</dt><dd class="mono">${esc(d.ak_fingerprint || '—')}<span class="hint">ECC P-256, derived in the TPM's endorsement hierarchy</span></dd>
       <dt>Enrollment</dt><dd>${d.enrolled ? 'Enrolled (attestation key and firmware baseline recorded)' : 'Not enrolled: run <span class="mono">witness enroll</span> on a known-good boot'}</dd>
       <dt>Evidence</dt><dd>${d.address ? `Live: witnessd at <span class="mono">${esc(d.address)}</span>, fresh nonce each time` : `Replay of <span class="mono">${esc(d.evidence)}</span> with its saved nonce`}</dd>

@@ -91,3 +91,14 @@ def test_device_key_under_another_release_key_fails():
     key = next(c for c in _appraise("release/attestation-v2-current.json", reference=reference).checks
                if c.name == RELEASE_KEY_CHECK)
     assert not key.ok and key.detail == "key is not bound to the released state"
+
+
+def test_rollback_message_needs_a_proven_key():
+    from conftest import load
+    from witness.verify import appraise
+    data = load("release/attestation-v1-rolled-back.json")
+    data["attestation"]["device_key"].pop("certify")
+    verdict = appraise(data["attestation"], bytes.fromhex(data["nonce"]), load("release/reference.json"),
+                       load("release/enrollment.json"))
+    key = next(c for c in verdict.checks if c.name == RELEASE_KEY_CHECK)
+    assert key.detail == "key is not certified by this device's attestation key" and verdict.sealed == "locked"

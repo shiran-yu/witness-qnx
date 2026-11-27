@@ -193,12 +193,12 @@ def _check_device_key(verdict: Verdict, attestation: dict, nonce: bytes, referen
                                    device_key_policy(bytes.fromhex(release["release_x"]), bytes.fromhex(release["release_y"])))
         # the key works under any signed release: the one this device booted must be the current one
         approved = release["approved_policy"]
-        signed_for_this_release = approved == pcr_policy_digest(
-            {i: bytes.fromhex(reference["pcr"][str(i)]) for i in RELEASE_PCRS}).hex() \
-            and approved == pcr_policy_digest({i: pcrs[i] for i in RELEASE_PCRS}).hex()
+        reference_consistent = approved == pcr_policy_digest(
+            {i: bytes.fromhex(reference["pcr"][str(i)]) for i in RELEASE_PCRS}).hex()
+        signed_for_this_release = approved == pcr_policy_digest({i: pcrs[i] for i in RELEASE_PCRS}).hex()
     else:
-        policy, signed_for_this_release = pcr_policy_digest(released), True
-    bound = key.auth_policy == policy and signed_for_this_release and key.attributes & TPMA_OBJECT_FIXEDTPM \
+        policy, reference_consistent, signed_for_this_release = pcr_policy_digest(released), True, True
+    bound = key.auth_policy == policy and key.attributes & TPMA_OBJECT_FIXEDTPM \
         and not key.attributes & TPMA_OBJECT_USERWITHAUTH
     enrolled = not enrollment or enrollment.get("device_key") in (None, device_key["public"])
     signed = signature_valid(key, DEVICE_KEY_LABEL + nonce, bytes.fromhex(device_key["signature"]))
@@ -206,16 +206,18 @@ def _check_device_key(verdict: Verdict, attestation: dict, nonce: bytes, referen
     certify = bytes.fromhex(device_key.get("certify", ""))
     certified = bool(certify) and parse_certify(certify) == (nonce, key.name) and signature_valid(
         parse_public(bytes.fromhex(attestation["ak_public"])), certify, bytes.fromhex(device_key["certify_signature"]))
-    ok = bool(bound and enrolled and signed and certified)
+    ok = bool(bound and enrolled and signed and certified and reference_consistent and signed_for_this_release)
+    # proof failures first: only a key proven to be this TPM's enrolled key can say which release it booted
     verdict.checks.append(Check(name, ok, "TPM released the key bound to the released boot state; it signed our nonce"
-                                if ok else "device booted another signed release, not the current one"
-                                if not signed_for_this_release
-                                else "key is not bound to the released state" if not bound
+                                if ok else "key is not bound to the released state" if not bound
                                 else "key differs from the enrolled one: re-provisioned" if not enrolled
                                 else "key is not certified by this device's attestation key" if not certified
-                                else "signature over our nonce is invalid"))
+                                else "signature over our nonce is invalid" if not signed
+                                else "reference's signed policy does not match its own PCR values"
+                                if not reference_consistent
+                                else "device booted another signed release, not the current one"))
     # an older signed release gets the key from the TPM; say so rather than "locked"
-    rolled_back = signed and certified and enrolled and not signed_for_this_release
+    rolled_back = signed and certified and enrolled and bound and reference_consistent and not signed_for_this_release
     verdict.sealed = "unsealed" if ok else "released to an old release" if rolled_back else "locked"
     verdict.sealed_proven = ok or bool(rolled_back)  # proven by the key's own signature and the AK's certify
 

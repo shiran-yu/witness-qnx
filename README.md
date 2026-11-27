@@ -137,7 +137,7 @@ run (build, boot, enroll, attack, four tampers, restores, a signed update) is in
   pass  event log (PCR 9)            log replays to the quoted PCR
   pass  system and /etc (PCR 8)      253 measurement(s) match the release
   pass  applications (PCR 9)         1 measurement(s) match the release
-  pass  device key (signed release, PCR 4,5,8,9) TPM released the key bound to the released boot state; it signed our nonce
+  pass  device key (signed release + PCR 0,2,7) TPM released the key bound to the released boot state; it signed our nonce
 ```
 
 `demo.sh attack` (root shell on the device, secure policy):
@@ -273,6 +273,10 @@ driver chose (`interrupt driven` after its interrupt self-test, or polling):
   TRUSTED (`released to an old release`), because it checks against the current reference
   (`demo.sh rollback`). Refusing old releases in the TPM itself needs a monotonic NV counter in the
   policy, which is not implemented.
+- Firmware updates: the device key is bound to this device's PCR 0, 2, 7, so a firmware or Secure
+  Boot db/dbx update locks it for good. The device is then re-provisioned (delete
+  `/data/var/witness/device-key.blob`, reboot) and re-enrolled (`witness enroll --force`); signed
+  software releases need neither.
 - An update release here is the released build plus replaced files (`witness reference --replace`);
   an update that changes the boot image (PCR 4) needs the EFI partition rewritten, which the demo's
   read-only `/boot` does not allow from a root shell.

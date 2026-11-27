@@ -7,7 +7,7 @@
 #   demo.sh enroll     record the device's attestation key and firmware baseline (known-good boot)
 #   demo.sh verify     challenge the device and appraise its boot against the release
 #   demo.sh tamper [config|app|lib|data]  modify the device the way an attacker would, then reboot
-#   demo.sh restore    undo the tamper, reboot
+#   demo.sh restore    undo the tamper (or a rollback: reinstall the current release), reboot
 #   demo.sh update     signed release v2 (one hardened file), installed as an update agent would (here over ssh);
 #                      the device keeps its key
 #   demo.sh rollback   reinstall release v1 and its genuine signed policy (the verifier refuses it)
@@ -130,6 +130,11 @@ restore)
                  for f in sshd_config:/system/etc/ssh/sshd_config witnessd:/system/bin/witnessd libtss2-rc.so.1:/system/lib/libtss2-rc.so.1 network:/data/var/etc/settings/network; do
                      o=/data/var/witness/${f%%:*}.orig; t=${f#*:};
                      [ -f $o ] && cp $o $t.restore && mv $t.restore $t && rm $o; done; true'
+    if [ -f "$WORK/reference-v1.json" ]; then  # at release v2: reinstall it (undoes a rollback)
+        "${SSH[@]}" 'cat > /system/etc/ssh/.sshd_config.new && mv /system/etc/ssh/.sshd_config.new /system/etc/ssh/sshd_config' \
+            < "$WORK/release-v2/sshd_config"
+        push_release_policy
+    fi
     reboot_device
     ;;
 update)

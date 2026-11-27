@@ -40,7 +40,8 @@ CHAIN = [
     ("apps", "Applications", "9",
      "Every measured application matches the release.", ("applications",)),
     ("key", "Device key", "0, 2, 4, 5, 7-9",
-     "The TPM released the device's own key, which it allows only in the released boot state, and the key signed "
+     "The TPM released the device's own key, which it allows only on this device's firmware and a boot state "
+     "the release key signed, and the key signed "
      "this request.", ("device key",)),
 ]
 KIND_TEXT = {
