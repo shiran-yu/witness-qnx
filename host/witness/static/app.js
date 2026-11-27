@@ -162,7 +162,7 @@
         <div><h2><a href="${href}" data-focus="card-${esc(d.name)}">${esc(d.name)}</a></h2><p class="where">${where}</p></div>
         ${note}
         <dl class="facts">
-          <dt>Device key <span class="hint">${d.sealed_proven ? 'proven by TPM signature' : 'reported by agent'}</span></dt><dd>${secret(d.sealed)}</dd>
+          <dt>Device key <span class="hint">${d.sealed_proven ? 'proven by TPM signature' : 'agent’s claim, not verified'}</span></dt><dd>${secret(d.sealed)}</dd>
           <dt>Attestation key</dt><dd class="mono">${esc(d.ak_fingerprint || '—')}</dd>
           <dt>Enrollment</dt><dd>${d.enrolled === false ? 'Not enrolled' : d.enrolled ? 'Enrolled' : '—'}</dd>
           <dt>Last checked</dt><dd>${agoTag(d.time)}</dd>

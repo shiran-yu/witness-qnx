@@ -35,6 +35,7 @@ start() {
         "$SWTPM" socket --tpm2 --tpmstate dir="$STATE" --ctrl type=unixio,path="$STATE/sock" \
             --log file="$STATE/swtpm.log",level=1,truncate --pid file="$STATE/swtpm.pid" --daemon
         for _ in $(seq 50); do [ -S "$STATE/sock" ] && break; sleep 0.1; done
+        [ -S "$STATE/sock" ] || die "swtpm did not start (socket path must be < 108 chars; see $STATE/swtpm.log)"
         tpm=(-chardev socket,id=chrtpm,path="$STATE/sock" -tpmdev emulator,id=tpm0,chardev=chrtpm
              -device tpm-tis,tpmdev=tpm0)
     fi

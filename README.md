@@ -145,7 +145,7 @@ on: Operation not permitted (/proc/boot/witness-measure)
 After `tamper config` and a reboot:
 
 ```
-127.0.0.1:10023  NOT TRUSTED   device key: locked (reported by agent)
+127.0.0.1:10023  NOT TRUSTED   device key: locked (agent’s claim, not verified)
   FAIL  system and /etc (PCR 8)      1 difference(s) from the release
   FAIL  device key (PCR 0,2,4,5,7,8,9) TPM refused to release the device key: tpm:session(1):a policy check failed
        CHANGED  PCR 8  /system/etc/ssh/sshd_config

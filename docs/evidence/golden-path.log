@@ -1,7 +1,7 @@
 ==> cross-building Witness for QNX 8.0 x86_64
 ==> creating a UEFI QNX 8.0 image with the Witness layer
 ==> computing reference values from the build output
-wrote <repo>/.work/reference.json: boot=uefi PCR4=4c1a1ea3fad4… PCR5=13d5dddb22a8… PCR8=2b1e4331e61b… PCR9=a73ab2d338b8…, 253 PCR 8 + 1 PCR 9 expected events, 252 files
+wrote <repo>/.work/reference.json: boot=uefi PCR4=57d423894b73… PCR5=c6fd0f833c55… PCR8=5cda8d054462… PCR9=a73ab2d338b8…, 253 PCR 8 + 1 PCR 9 expected events, 252 files
 started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
 ==> waiting for witnessd
 ---> Witness: starting TPM driver
@@ -51,7 +51,7 @@ on: Operation not permitted (/proc/boot/witness-measure)
 ==> attacker enables password logins in /system/etc/ssh/sshd_config
 ==> rebooting
 started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
-127.0.0.1:10023  NOT TRUSTED   device key: locked (reported by agent)
+127.0.0.1:10023  NOT TRUSTED   device key: locked (agent’s claim, not verified)
   pass  attestation key              AK 59a38e285aa23b6e
   pass  quote signature              ECDSA P-256 over TPMS_ATTEST
   pass  freshness                    quote carries this request's nonce
@@ -72,7 +72,7 @@ started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.lo
 ==> attacker plants a modified TPM library that witnessd loads
 ==> rebooting
 started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
-127.0.0.1:10023  NOT TRUSTED   device key: locked (reported by agent)
+127.0.0.1:10023  NOT TRUSTED   device key: locked (agent’s claim, not verified)
   pass  attestation key              AK 59a38e285aa23b6e
   pass  quote signature              ECDSA P-256 over TPMS_ATTEST
   pass  freshness                    quote carries this request's nonce
@@ -93,7 +93,7 @@ started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.lo
 ==> attacker swaps the attestation agent binary for a patched copy
 ==> rebooting
 started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
-127.0.0.1:10023  NOT TRUSTED   device key: locked (reported by agent)
+127.0.0.1:10023  NOT TRUSTED   device key: locked (agent’s claim, not verified)
   pass  attestation key              AK 59a38e285aa23b6e
   pass  quote signature              ECDSA P-256 over TPMS_ATTEST
   pass  freshness                    quote carries this request's nonce
@@ -116,7 +116,7 @@ started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.lo
 ==> attacker appends a command to /etc/settings/network, which the boot script runs as root
 ==> rebooting
 started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
-127.0.0.1:10023  NOT TRUSTED   device key: locked (reported by agent)
+127.0.0.1:10023  NOT TRUSTED   device key: locked (agent’s claim, not verified)
   pass  attestation key              AK 59a38e285aa23b6e
   pass  quote signature              ECDSA P-256 over TPMS_ATTEST
   pass  freshness                    quote carries this request's nonce
