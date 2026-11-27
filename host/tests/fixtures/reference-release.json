@@ -1,0 +1,1554 @@
+{
+ "version": 2,
+ "created": "2026-11-27T06:30:19+00:00",
+ "image": "vm",
+ "boot_mode": "uefi",
+ "ifs_sha256": "148d033dbef4c5a23d5c31fda8ef54447857768bd5acab9624d24a9e70ae1852",
+ "events": {
+  "8": [
+   {
+    "type": "file",
+    "path": "/system/bin/arp",
+    "sha256": "a761b434034337b16786729edb29dbef9ac77c2abb402b9d7cc6b04da28e07df"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/ascii",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "link",
+    "path": "/system/bin/awk",
+    "sha256": "b4a945b5c29875c81073616997e5b58a007ee917ee718fe411b8550cbd94ec68"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/base64",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/basename",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/bc",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/bsdtar",
+    "sha256": "524ecf750b7a819edbd251ff20f44db6b4cd1fc477c4704ec539a9c78f72ead0"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/bunzip2",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/bzcat",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/cal",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/chgrp",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/chkqnx6fs",
+    "sha256": "be83bbbff2aec9df9388a9d512ab113749f8d6634511cd5418f994b788d13346"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/chown",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/cksum",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/cleanup_tmp",
+    "sha256": "9b58e301999190fd9d84eb1fda2ecd3c2989ae6bc59a3b648e6f31b5d4cdc9e0"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/clear",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/cmp",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/comm",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/copy_settings.sh",
+    "sha256": "d11e3b392d040d9e52686aa40b34d45d306988cafb4dd802979d036a34d6207c"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/cp",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/cpio",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/crc32",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/curl",
+    "sha256": "00b2913917104ba52f700f00d35a1c7eb89e8c786d420e846dfa743957c3333c"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/cut",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/date",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/devb-loopback",
+    "sha256": "882e6a599713622024a7fbdbb76bbe34b7087a04c774ae3cf46ce49cc3aa3c7d"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/devb-umass",
+    "sha256": "0f914ff1c29f680b54644e26a420b02cf40e2b0d72bf71284534518c3277761a"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/devc-pty",
+    "sha256": "978d12b31b4bf4d3d05e09b7a387e7f2a9f3c793422161fe83e608ee3a31e476"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/df",
+    "sha256": "f078ba90a236ebd24535576d46501855fca129c7b7225193ba1aaeb7117e9d8d"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/dhcpcd",
+    "sha256": "62facfb2bb31d6a7d904232cac25809b2149d12c6c34140ef62b02ce63d6c548"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/diff",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/dirname",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/dos2unix",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/du",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/dumper",
+    "sha256": "24cd5d4015240abcce4388eb0bebb96923117c652922d79461e059d0ccd4a8dc"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/egrep",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/env",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/expand",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/expr",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/false",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/fdisk",
+    "sha256": "345c9cde5ddac7a8220d2e241f93a55a68ec6e10da07b98ee836b24e7e81fe34"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/fgrep",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/file",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/find",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/fmt",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/fs-nfs3",
+    "sha256": "d27a9d7f9303934ecee2d4ccc236e5b7188fc2e89ca156d282cfd076cb9fe5f6"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/fullpath",
+    "sha256": "e788d1b84ea6dd0b3b36caaaf8b705584b772f94b72766574884a88af21d64e6"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/gawk",
+    "sha256": "81b71072736bde2fa934545a37bb067cf6e8756dc4cd182034c6af654ba9b1f4"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/getfacl",
+    "sha256": "60cab0f4f9888a0b8fe95609c6ad78dd19a4596126e66513b35abf113ea872aa"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/groups",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/gunzip",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/gzip",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/hd",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/head",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/hexdump",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/hogs",
+    "sha256": "8fa776414ce427ec7f441490e3661107fabba51ecae66158192b614c993586ae"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/hostname",
+    "sha256": "452af86f483b769f6bde31dc47835ebba089c21d51d1c0dfa90bf27b7f8c35bd"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/id",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/if_up",
+    "sha256": "6735ae348b452f0ba371d620e48341096204007e1fe5c2372a9763a102380c35"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/ifconfig",
+    "sha256": "516b26ef8d60b38ed5f5c54accad1bd5dbadeaa4c2d38b4ccf9487f4bb6c053c"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/ifmcstat",
+    "sha256": "83a1de4671616b5f999da3769ef654faa49f3fa3d00403a326bcb35214fd10af"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/ifwatchd",
+    "sha256": "3905f07ae8ba90431af11644df0353d5231f0ddf6ef89d0b66dd915650341dd6"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/install",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/io-sock",
+    "sha256": "c07ab5bad1f90f6e326f21d058b3cc4e6617221a10f9cfaa60a13b94f09eec5f"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/io-usb-otg",
+    "sha256": "37676baac33ba9f16649eeb2ff235414310203498b390cd07fb38b5b0798307d"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/iperf2",
+    "sha256": "26836cc02259a915c467638863b2814e8a355bc24c09b1170b1d74933d3f315d"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/iperf3",
+    "sha256": "95d37d1e3087ce29503b6f3004760e8641e4c0c4ec00d17c46e7882be7bb2969"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/ldd",
+    "sha256": "2b6bc69a1568de5a1391941dc8b4c61b84bc37e07067ffbf3a27fc25b3718a87"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/less",
+    "sha256": "125c8ccbbe3770c57a22dcd02d063c58c385cff7faabb233bcabe3a4d65b78e1"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/link",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/login",
+    "sha256": "76a67bf3ba7620b25142c39b35ef4e6a9b167fa58d4e21d773d3d78817d63344"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/logname",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/md5sum",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/mkdir",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/mkdosfs",
+    "sha256": "582f1d17b5dd704f0a35ea9b2cc0897177cb5fefbd93de95c056ced30a49de04"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/mkfifo",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/mktemp",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/more",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/mqueue",
+    "sha256": "0205e9e9245cd23bab5f674e489f8ef4bdcb958c4936d5aff53b9f8ce8049a3a"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/mv",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/ndp",
+    "sha256": "e5fd6d5c7ec495f5434d1e43cb9e09f0765b0776b37bc5a06a1fff3812a91a8c"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/netstat",
+    "sha256": "6f7e3dcbab52ed9618c8d411275a7616c1cc3a04113c13c91bcaa27e0c7c7cc5"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/nl",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/nohup",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/ntp-keygen",
+    "sha256": "0cda088cf6b2de2a8d21873392f27229b478541a3e069738d0b77f55cc0c933b"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/ntpd",
+    "sha256": "68533ebfff9ce93c052499e9b359c81cc424a7f5776be700348adee88f5fed49"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/ntpdate",
+    "sha256": "262fafd0905fecaf1a1a74929faf27645c2e64bd93f12090eea537f932756a7b"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/ntpq",
+    "sha256": "318ab888d0328353dbd39e5f1dcb5d10f02bd75906d7113b8a3a2c11077af5b7"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/od",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/openssl",
+    "sha256": "6c7b75d95d1e3994a9bcd9e11520659cfc5ea1c5cb81e46d8eeed4ccd2112848"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/passwd",
+    "sha256": "8a21f7524e25a10bc8571c997dde5aa50b1eee5eda4a6b71858bea30dbc09c2a"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/paste",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/patch",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/pci-tool",
+    "sha256": "5d7565f8bc3ebbc0a5d07a6a3c541664329fa16ec4865ef10e34311a2bbff2cd"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/pdebug",
+    "sha256": "730377c5429c63792b4726ddb56793d607a56b4ad7b417dbcc99cb15cebc7706"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/pfctl",
+    "sha256": "450293bc2c8a1f543f473aa5fa561d14c650047f8d1ab20261688f97f6db69c8"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/ping",
+    "sha256": "7eba723a7e58ce88df9b5894b0ffc2769b1dd377f7379cd5a16ca91a2949a77b"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/pipe",
+    "sha256": "f415d449a3d38cf3b4e64dbf4fd713a69b0ce23a9a2afc7fc4820af7a6cfd124"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/printenv",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/printf",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/pwd",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/qconn",
+    "sha256": "ee7d9d720292778a42d95cf82654e73ad8e58a328c9e7872fbaaea6a6b8c3dab"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/random",
+    "sha256": "b85cf14d4eaf16e0696bae074aaa93d080e72228ef952fa94dc9da1aa0df5590"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/readlink",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/realpath",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/rmdir",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/rootish_allowed",
+    "sha256": "a40fbaef2d0ad4fe53cccf6246c516cc6c8ed459b5293e8de4cef435483d7fd8"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/route",
+    "sha256": "58c013bb00c557a083fbb7a1ee5cdc7349ffc24309b8f35ec34328e9ee2a9a1e"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/scp",
+    "sha256": "7083ae66da45dc955b985da444207811316537b024759343320a3bd00242f274"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/secpolmonitor",
+    "sha256": "71ff4201332d1538df8bce5f602f944a9718b1ab1dbd9a8dab2425ae285a2d9b"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/sed",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/seq",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/setkey",
+    "sha256": "1cfd319388cb85b0d781ed45e2a2c27516b2af0af6d2a18fa35dfd3e072ab620"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/sftp-server",
+    "sha256": "19441033df3052d46aed99b24966fc01e1648518fb6cc045b1937c83d9c4436f"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/sha1sum",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/showmount",
+    "sha256": "266efd6b68ec050935ae65341a0eddba5b03375f70c0784fef227efb816ba6ad"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/shutdown",
+    "sha256": "f441603300cf2b2765a6845b8dfa0dc5a9b088c329245e813892c432e1e99a04"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/slay",
+    "sha256": "822d0aabb8d51a4749af1ecbccba225b673363439d3da813956bf70fbd08a2b7"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/sleep",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/slog2info",
+    "sha256": "af623e7eb5d25fc9e78c34b8b077c86564de72713beda35f833cdec00f469d2e"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/sntp",
+    "sha256": "e30bea7a1f7afc4490093597367434e500b2e7fdac802681439360f8ada453c6"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/sockstat",
+    "sha256": "c325c4b15ab0aab6380a427675180acb353219a7d6e5106f614606379fd892bd"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/sort",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/split",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "link",
+    "path": "/system/bin/splsh",
+    "sha256": "d30929eb76aa4e79ade4ae0ffef0c09c2007946fd9f33355b2dda3b5d2d83c1d"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/sqlite3",
+    "sha256": "d1c206c2f74720ed6ef2f9d48e08339ff138729d4a909f95e4aa5024101acda7"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/ssh",
+    "sha256": "b58aaf378a3a3d46c7a75cee9349fecb4e329e2a57c4564b96837b629f462b1d"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/ssh-keygen",
+    "sha256": "94edb96094bdaf5eff1f43c936a61ec71f299a0b92733738d3dfbba79f695023"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/sshd",
+    "sha256": "0e99a63e7731e941eaf3254c0f41ee747cd9f68c2bd06dbdd45892edb8018ddc"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/sshd-auth",
+    "sha256": "eb682a07021ac01c4f55f8bb8067b00df5ece96d32bbc992ce72f23008c474b9"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/sshd-session",
+    "sha256": "6aa116f24462364baf0bb2481672eda8d432a197de803b17d163a0f2a7716e4e"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/start_net.sh",
+    "sha256": "abe38f049ea2bd08193ea3d25f40238ffa4852b917e76bedb2764aa430c516cc"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/stat",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/strings",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/stty",
+    "sha256": "7d76ef23bf6099e4885204e8a7589a34d7704acd66822963e0d79b30cf8e6616"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/su",
+    "sha256": "251c54dc0d03e4529bbbd691a6a786f48ebfa1a678bec63bb20a7ebe768a4869"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/sync",
+    "sha256": "ede242688600cf2215dfda92d2715f9467775bec379d6151b8a6ddf6708865c6"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/sysctl",
+    "sha256": "4ea4e7716897994e47bbd82981715fc62bc51f715b90d74647165dfc1c2156e9"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/tail",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/tar",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/tcpdump",
+    "sha256": "ccfeb1071249c1fd05cf9d6b73b59936b44ae02bbf07c9a75bf8205858fa0b8d"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/tee",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/test",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/time",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/timeout",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/top",
+    "sha256": "bec97072e2f190b737872c8e754a71a41b2b328c6bdaadc2487acbff610fb0c2"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/touch",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/toybox",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/tpm-raw",
+    "sha256": "efe0c50b456f6ad93f0bd077450694a87b50a5946ffe6c2e45c0200e3e974d6b"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/tr",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/tracelogger",
+    "sha256": "e3358eec93de171958ae08bd6738be29fb454a42a6d589f6342cb7444d974911"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/traceroute",
+    "sha256": "259f5f6666c5ac06c12146ae7c8a5d234f9df4f382272df38c840f4db4cad088"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/traceroute6",
+    "sha256": "9ee004a77b837cb9572bc8c7e5d0545ce7e245943c9e948e098faa2d18509771"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/true",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/truncate",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/tty",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/uname",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/uniq",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/unix2dos",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/unlink",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/usb",
+    "sha256": "d0bc5e982fa7f0ff9af3c59bf15abf28e0adb82f0181bcccdc35c023f72cbda8"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/use",
+    "sha256": "ae444ddd9bfa979df56d11117d72fddc6f4daa6004ff3f26c9b400e66d2ae504"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/uudecode",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/uuencode",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/uuidgen",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/vi",
+    "sha256": "fa7e7025b607bbf770ea3b3bce3a4c8699d4eaa9ee7ed1d27fa6c3f1d9d7d878"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/wc",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/which",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/whoami",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/witnessd",
+    "sha256": "978ab6bb41cec44168c7809b8f714e6de23816ee760107a5899b5bb8dab02508"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/xargs",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/xxd",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/yes",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/bin/zcat",
+    "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
+   },
+   {
+    "type": "file",
+    "path": "/system/etc/build.date",
+    "sha256": "eca936669a28c44285a02e9c4a338130af9827eb64b32374b2cb64549680c945"
+   },
+   {
+    "type": "file",
+    "path": "/system/etc/dhcpcd/dhcpcd-hooks/20-resolv.conf",
+    "sha256": "106acad708ba623b7e6543cceb5935f153d86b99d34966cd3d2802658e38f411"
+   },
+   {
+    "type": "file",
+    "path": "/system/etc/dhcpcd/dhcpcd-run-hooks",
+    "sha256": "fe1d4e3bf936f3630655386c0613ae04d6e8f6585f63ec2850a90724eb35e85a"
+   },
+   {
+    "type": "file",
+    "path": "/system/etc/dhcpcd/dhcpcd.conf",
+    "sha256": "6ce9b978471ab545494c4de06a242ee993c2866fdfa67eec4ca797a705692a8d"
+   },
+   {
+    "type": "file",
+    "path": "/system/etc/dhcpcd/dhcpcd.exit-hook",
+    "sha256": "4839e8f341233d0253ae9db31cf3e3dd9f99e1b2b1b464fb9a9c364d56da32bd"
+   },
+   {
+    "type": "file",
+    "path": "/system/etc/pam/login",
+    "sha256": "41bb200b0fed0da12441434d93df5e9c7a5c6a5f949dd713e04a1ffe9a9162a8"
+   },
+   {
+    "type": "file",
+    "path": "/system/etc/pam/pam_secpol_users",
+    "sha256": "2ab73e2a9f2e6fef8383261322be77e9593d7f8041697c94667360915b7917c3"
+   },
+   {
+    "type": "file",
+    "path": "/system/etc/pam/passwd",
+    "sha256": "504ffcef1851f17e6d24d3eb2d0c68a2ab90228980f81388e3bf4b097ca4c113"
+   },
+   {
+    "type": "file",
+    "path": "/system/etc/pam/sshd",
+    "sha256": "41bb200b0fed0da12441434d93df5e9c7a5c6a5f949dd713e04a1ffe9a9162a8"
+   },
+   {
+    "type": "file",
+    "path": "/system/etc/pam/su",
+    "sha256": "f34641edcf95e890fbce2e07f09e2355b60a16e45ab191fa3d53ecfe95249789"
+   },
+   {
+    "type": "file",
+    "path": "/system/etc/profile",
+    "sha256": "61f2a9b1d5a4a75dcf262baaa69a4c8e747bd23827e138882d82682411068662"
+   },
+   {
+    "type": "file",
+    "path": "/system/etc/ssh/sshd_config",
+    "sha256": "7c78a5ce42baa2c79a335b1bf2a7f40b0f26ed6b69029b46024d731145ef5e15"
+   },
+   {
+    "type": "file",
+    "path": "/system/etc/startup/pinger.sh",
+    "sha256": "0d8b6092ec50b3db04409f16dc1048b75c2ff62add79f225851bb40ca458c85f"
+   },
+   {
+    "type": "file",
+    "path": "/system/etc/startup/post_startup.sh",
+    "sha256": "abdec35190cb51c3250eeee4aaeff236c9d05f3476d734dc6499711d0e302527"
+   },
+   {
+    "type": "file",
+    "path": "/system/etc/terminfo/q/qansi",
+    "sha256": "56549f6a15910c6ee83b2922aefd8b06bbe24d0c739afb966802d06cf10023b5"
+   },
+   {
+    "type": "link",
+    "path": "/system/launcher/pidin",
+    "sha256": "d30929eb76aa4e79ade4ae0ffef0c09c2007946fd9f33355b2dda3b5d2d83c1d"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/dll/devs-vtnet_pci.so",
+    "sha256": "bccc615e43e9cab33e599412db4ab32b83e43f972941212ebd211723e02fb3de"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/dll/devu-hcd-ehci.so",
+    "sha256": "98df0c14b71128ed4933549e9d9e1974f0118793d8ca641dde2fa2c9c4213b5b"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/dll/devu-hcd-uhci.so",
+    "sha256": "d59cf560136dfaaff5f6597a5b44acfe93b991f8fbff1aeaa3c77d230c9869ca"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/dll/devu-hcd-xhci.so",
+    "sha256": "b58fcf969cab076f1cc961b51d4f972e5bd3dabe8fe5684f19af72948a03d532"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/dll/fs-dos.so",
+    "sha256": "2a96d44b10292453f95084ae0b219e082be76ffc4e8b06db5e1a2f23e6b902ae"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/dll/mods-pci.so",
+    "sha256": "040b55b9af416e0781149c3fe66988b995c2941b9eb72e023158990a335e1f45"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/dll/mods-phy.so",
+    "sha256": "f40d1b88e666d0154294e25955431e4d2772266736469a84486b72da5fcbe4c9"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/dll/mods-usb.so",
+    "sha256": "35399315bff28508371a23e3700a98285c7990958f7bb0288c4b85db81228ffb"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/dll/pam/pam_deny.so",
+    "sha256": "176bc48c11a5aab1079c0e17a052581f57f5c742f63573415a9c5433b2760251"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/dll/pam/pam_echo.so",
+    "sha256": "a9ee2b7ce7511d5356bce1aed0770689560f236c862f94c37c1020e0e4a5f115"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/dll/pam/pam_exec.so",
+    "sha256": "d75b8c78ee46daf1bdf299fcef5ac4e569f3c80e5e514ab5587ba4231c8be560"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/dll/pam/pam_group.so",
+    "sha256": "05b0fbf7078d2784e2d3b1491bfb438c14075b3ec6a78986014349deb4212dcc"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/dll/pam/pam_permit.so",
+    "sha256": "4bbbf7d37ae5b810804933ab2a9032cc1aced55b343fe965a3b52132d5cb245c"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/dll/pam/pam_qnx.so",
+    "sha256": "b0a780a6fcda8b2114813ee46137ea5ca57627c96c9198aecd5ee339568725eb"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/dll/pam/pam_rootok.so",
+    "sha256": "d3bda0babc74cbea630c1fa384d8b944c98179637979686038a1af94f11600d8"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/dll/pam/pam_secpol.so",
+    "sha256": "bc298ddffe739c806736b88a56e31cff3799ccdafcef370888678f5dcf13c19f"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/dll/pam/pam_self.so",
+    "sha256": "152adde5ca1f07d27e0719307acbe38649372f9a0bba5e2bcdf5e203e37a33ec"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libbz2.so.1",
+    "sha256": "5a13d85a54afc67a285aee596205caa7c11d03c86961a8d9620dee3dad4b922f"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libc++.so.2",
+    "sha256": "3f32f3ed367285731a60f3fd05bd4d681050ef8a82d66a2d82059681cd0e714c"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libcares.so.8",
+    "sha256": "af87660a8a4d1752aa412ccec8b13b518ad9c034e96a647363febd960fc742fe"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libcatalog.so.1",
+    "sha256": "09613ccd54041a9a91cb74e25b770a34ebeffa8993fe5b9db0b8b750038cf92f"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libcurl.so.12",
+    "sha256": "6fc9a8a43af39ddabdc59356a2785ef2a9b5752286ac90764921171a645b08dc"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libedit.so.0",
+    "sha256": "04a23cbb6cbf84e5d4de98e2e0c5a1fc365dd6cf573308d437104d22867da876"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libexpat.so.2",
+    "sha256": "51f8b1729e255540f4c167912c1656505949390887c464b7144e1af7cbe75258"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libfdt.so.1",
+    "sha256": "0965db971d3ca0b0e74cfe680b7ef18a7054bea823716b111f89c1d5aa51696d"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libiconv.so.1",
+    "sha256": "c8cf148bc452c31b86954b3112e19414a74da3d7a0881c56e0d39986f8165fb3"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libintl.so.1",
+    "sha256": "648f2c34cd0a70d0a7df79d2fbbe683dc71abb54a29e163697449e7f721962db"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libiperf.so.0",
+    "sha256": "c94036c0a8d658ef66ccc442c0807641088e3bd5c2b9c32e3b0c506ae2abaf0a"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/liblzma.so.5",
+    "sha256": "62b8c1506f1fd52d463cce31f123728decf59b10588d9090b96e8f61358363f7"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libncursesw.so.1",
+    "sha256": "ac7cec04ebcd7cc7d274f8a804546d5ade17c7eddd7efc316b19bb94e0e5e6eb"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libpam.so.2",
+    "sha256": "16cdbb7d39b4c78a62f05b60ab2e6f66658ce0fb576469710354e0d5a812a01a"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libpanelw.so.1",
+    "sha256": "07028df78ddff21a4c74b33610e5801dc7ff9d4c56b3cfdfbbe1c5d5d3f10f82"
+   },
+   {
+    "type": "link",
+    "path": "/system/lib/librcheck.so",
+    "sha256": "e99cc26a0cebc3cae1e8059ad914539bec35197bc0855bd7698716331998b992"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/librcheck.so.1",
+    "sha256": "4a3add8a4cbc33bb6ed8fad3bdc04e58d68f523c1ac928e36b38096f38f36168"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/librpc.so.2",
+    "sha256": "46542fe39172ebb6e5d128d1014a679e50210f7e8bb7d139dc21564905d2bbad"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libssl.so.3",
+    "sha256": "bd742a3db0fbf828fc3d2663cfd665f5f90f226596f9f08b78f435393c0fcd37"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libstdc++.so.6",
+    "sha256": "7334d7c24ad7cef3ae5389af399eebcaf919610b67c1f43836d3881e38b40dc4"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libtracelog.so.1",
+    "sha256": "dcaae2536909564b26485d6e414d51cd858f20f59ccba8367a66a2c6a5613921"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libtss2-esys.so.1",
+    "sha256": "47c4ebba0e7abff65e678b531ac4c791fd8b14c2e10d5115c96c09f4479f8948"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libtss2-mu.so.1",
+    "sha256": "8f6bc46823efe3997a4b44278aafbd6053c2fcd3dbf33ee369b7a0ed84f9cda6"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libtss2-rc.so.1",
+    "sha256": "80d9b3a872e6fd2a881287ff0580a5b57976e9f838b1e50b261ddad2fe2a3cb4"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libtss2-sys.so.1",
+    "sha256": "031c84992023153e45ce831deaf8870bd8b4d0787839e84eddfcb9aaeb5aae7f"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libtss2-tcti-witness.so.0",
+    "sha256": "12773f1ceb45127562fee2f4f98abad87b8d115569b3df3b5bbb73bd1a541705"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libtss2-tctildr.so.1",
+    "sha256": "46edcabaca49bfb458004966076d6e4fe3c8a4f08969c377c8ce84d2f12f273e"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libtss2_helper.so.1",
+    "sha256": "e71146d96349f6104950cd497f7d363bf7abcceb38a92ab4d7d59bc0521a3cb0"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libunwind.so.8",
+    "sha256": "5814a901797558530d753ca2752b8eb11ef14d87244e4ae40dd16e19df2c6f43"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libusbdci.so.2",
+    "sha256": "1d9883e766de169293b4bf37dd211aba92c69552c2ed1616ff0db1f4ebca57de"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libusbdi.so.2",
+    "sha256": "e00cfc23b7264fbd5932bae80e2e1d099d12e049ca651aa09530847da6b90ee8"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libxml2.so.16",
+    "sha256": "fdccf2045332fff2337ff7fdbcfa92693f6060ecf57633deb68d5fc503b0a84e"
+   },
+   {
+    "type": "file",
+    "path": "/system/lib/libxo.so.0",
+    "sha256": "103c13e0f5874cc774c2350951a7fa0ba0799db5442573e01fb715c13c826dc3"
+   },
+   {
+    "type": "file",
+    "path": "/data/var/etc/build.date",
+    "sha256": "eca936669a28c44285a02e9c4a338130af9827eb64b32374b2cb64549680c945"
+   },
+   {
+    "type": "file",
+    "path": "/data/var/etc/default/passwd",
+    "sha256": "70a20bcf6bf666e482b2af41cfb2fcf9b0601e2d8da164883f507ca3e7cbaf49"
+   },
+   {
+    "type": "file",
+    "path": "/data/var/etc/group",
+    "sha256": "f9bdd5a011cc8b3f5b1741e80b7784ce5666caaeb70639a5adbedf632f4bc507"
+   },
+   {
+    "type": "file",
+    "path": "/data/var/etc/hosts",
+    "sha256": "336de0d20e14a6e526e147580ef5b0a7167a4ff4ebd788222d71e4c238e7ab2e"
+   },
+   {
+    "type": "file",
+    "path": "/data/var/etc/passwd",
+    "sha256": "ed7ede1ed9261c7960d9d9f5ea2ea42c4b2f8a3881a5f263e433d6c88acc3541"
+   },
+   {
+    "type": "link",
+    "path": "/data/var/etc/profile",
+    "sha256": "f2a14885f8f94772c9339ca53f6ecb3742f2a36d2275fbd1b8f35892cd102653"
+   },
+   {
+    "type": "file",
+    "path": "/data/var/etc/protocols",
+    "sha256": "5325c2e99020cb7b4bb43717f8b4bc14440999131d4abd61b4d8a438f68b7047"
+   },
+   {
+    "type": "link",
+    "path": "/data/var/etc/resolv.conf",
+    "sha256": "83ec642cfe4e6b0a3af6c2cdf73059efa82942f8721bc4ef78880391e7799e98"
+   },
+   {
+    "type": "file",
+    "path": "/data/var/etc/services",
+    "sha256": "0b208005b8da16346b4896d2d2ea10cdb5f81254ee7e2171c3a362689e09adac"
+   },
+   {
+    "type": "file",
+    "path": "/data/var/etc/settings/network",
+    "sha256": "0d608d58383efbc0ea7559a286b7b08b244ab1c71a590a4378f6c306031bf610"
+   },
+   {
+    "type": "file",
+    "path": "/data/var/etc/shadow",
+    "sha256": "ad104356ca871e4a47de5fa8a22fb951bebfa5979de0f2a3757273d0de5ec82a"
+   },
+   {
+    "type": "file",
+    "path": "/data/var/etc/system/config/pci/pcidatabase.com-tab_delimited.txt",
+    "sha256": "92489d66dbf86103a56a08108fe360ae308de48b542e696f5f20cfabb6108464"
+   },
+   {
+    "type": "marker",
+    "path": "witness:system-measured",
+    "sha256": "4734ed8469f149c93052a69fca31c84cf1d3029245396faeb7b817d076dba191"
+   }
+  ],
+  "9": [
+   {
+    "type": "file",
+    "path": "/system/bin/witnessd",
+    "sha256": "978ab6bb41cec44168c7809b8f714e6de23816ee760107a5899b5bb8dab02508"
+   }
+  ]
+ },
+ "pcr": {
+  "8": "36b67b2b9eeb57d82b4959f604a1d43fcae1522a523f41e34051ce83d2a62b10",
+  "9": "747b3353f22bc92c70d3a5b36fd18f5ac6df468af4653f3ad38faa368941af67",
+  "4": "4e39561903bdf6fa89d08ab83ad96a8661d374055e858db8dd699b0de5617e0a",
+  "5": "a38dbffc57df2a768f6d9e0dde83507b1ae8a2e65e686e215db7ee5fb0153ab6"
+ },
+ "files": {
+  "/system/etc/build.date": "eca936669a28c44285a02e9c4a338130af9827eb64b32374b2cb64549680c945",
+  "/system/etc/profile": "61f2a9b1d5a4a75dcf262baaa69a4c8e747bd23827e138882d82682411068662",
+  "/system/bin/start_net.sh": "abe38f049ea2bd08193ea3d25f40238ffa4852b917e76bedb2764aa430c516cc",
+  "/system/etc/startup/post_startup.sh": "abdec35190cb51c3250eeee4aaeff236c9d05f3476d734dc6499711d0e302527",
+  "/system/lib/libstdc++.so.6": "7334d7c24ad7cef3ae5389af399eebcaf919610b67c1f43836d3881e38b40dc4",
+  "/system/lib/librcheck.so.1": "4a3add8a4cbc33bb6ed8fad3bdc04e58d68f523c1ac928e36b38096f38f36168",
+  "/system/lib/librcheck.so": "e99cc26a0cebc3cae1e8059ad914539bec35197bc0855bd7698716331998b992",
+  "/system/lib/libunwind.so.8": "5814a901797558530d753ca2752b8eb11ef14d87244e4ae40dd16e19df2c6f43",
+  "/system/lib/librpc.so.2": "46542fe39172ebb6e5d128d1014a679e50210f7e8bb7d139dc21564905d2bbad",
+  "/system/lib/libedit.so.0": "04a23cbb6cbf84e5d4de98e2e0c5a1fc365dd6cf573308d437104d22867da876",
+  "/system/lib/libc++.so.2": "3f32f3ed367285731a60f3fd05bd4d681050ef8a82d66a2d82059681cd0e714c",
+  "/system/lib/libncursesw.so.1": "ac7cec04ebcd7cc7d274f8a804546d5ade17c7eddd7efc316b19bb94e0e5e6eb",
+  "/system/lib/libintl.so.1": "648f2c34cd0a70d0a7df79d2fbbe683dc71abb54a29e163697449e7f721962db",
+  "/system/lib/libtracelog.so.1": "dcaae2536909564b26485d6e414d51cd858f20f59ccba8367a66a2c6a5613921",
+  "/system/lib/libexpat.so.2": "51f8b1729e255540f4c167912c1656505949390887c464b7144e1af7cbe75258",
+  "/system/lib/libpanelw.so.1": "07028df78ddff21a4c74b33610e5801dc7ff9d4c56b3cfdfbbe1c5d5d3f10f82",
+  "/system/lib/libiconv.so.1": "c8cf148bc452c31b86954b3112e19414a74da3d7a0881c56e0d39986f8165fb3",
+  "/system/lib/libcatalog.so.1": "09613ccd54041a9a91cb74e25b770a34ebeffa8993fe5b9db0b8b750038cf92f",
+  "/system/lib/libbz2.so.1": "5a13d85a54afc67a285aee596205caa7c11d03c86961a8d9620dee3dad4b922f",
+  "/system/lib/libxml2.so.16": "fdccf2045332fff2337ff7fdbcfa92693f6060ecf57633deb68d5fc503b0a84e",
+  "/system/lib/libxo.so.0": "103c13e0f5874cc774c2350951a7fa0ba0799db5442573e01fb715c13c826dc3",
+  "/system/lib/libiperf.so.0": "c94036c0a8d658ef66ccc442c0807641088e3bd5c2b9c32e3b0c506ae2abaf0a",
+  "/system/etc/terminfo/q/qansi": "56549f6a15910c6ee83b2922aefd8b06bbe24d0c739afb966802d06cf10023b5",
+  "/system/bin/shutdown": "f441603300cf2b2765a6845b8dfa0dc5a9b088c329245e813892c432e1e99a04",
+  "/system/bin/sync": "ede242688600cf2215dfda92d2715f9467775bec379d6151b8a6ddf6708865c6",
+  "/system/bin/hogs": "8fa776414ce427ec7f441490e3661107fabba51ecae66158192b614c993586ae",
+  "/system/bin/sqlite3": "d1c206c2f74720ed6ef2f9d48e08339ff138729d4a909f95e4aa5024101acda7",
+  "/system/bin/pdebug": "730377c5429c63792b4726ddb56793d607a56b4ad7b417dbcc99cb15cebc7706",
+  "/system/bin/ifconfig": "516b26ef8d60b38ed5f5c54accad1bd5dbadeaa4c2d38b4ccf9487f4bb6c053c",
+  "/system/bin/netstat": "6f7e3dcbab52ed9618c8d411275a7616c1cc3a04113c13c91bcaa27e0c7c7cc5",
+  "/system/bin/pci-tool": "5d7565f8bc3ebbc0a5d07a6a3c541664329fa16ec4865ef10e34311a2bbff2cd",
+  "/system/bin/tracelogger": "e3358eec93de171958ae08bd6738be29fb454a42a6d589f6342cb7444d974911",
+  "/system/bin/if_up": "6735ae348b452f0ba371d620e48341096204007e1fe5c2372a9763a102380c35",
+  "/system/bin/df": "f078ba90a236ebd24535576d46501855fca129c7b7225193ba1aaeb7117e9d8d",
+  "/system/bin/fdisk": "345c9cde5ddac7a8220d2e241f93a55a68ec6e10da07b98ee836b24e7e81fe34",
+  "/system/bin/hostname": "452af86f483b769f6bde31dc47835ebba089c21d51d1c0dfa90bf27b7f8c35bd",
+  "/system/bin/use": "ae444ddd9bfa979df56d11117d72fddc6f4daa6004ff3f26c9b400e66d2ae504",
+  "/system/bin/mkdosfs": "582f1d17b5dd704f0a35ea9b2cc0897177cb5fefbd93de95c056ced30a49de04",
+  "/system/bin/openssl": "6c7b75d95d1e3994a9bcd9e11520659cfc5ea1c5cb81e46d8eeed4ccd2112848",
+  "/system/bin/chkqnx6fs": "be83bbbff2aec9df9388a9d512ab113749f8d6634511cd5418f994b788d13346",
+  "/system/bin/gawk": "81b71072736bde2fa934545a37bb067cf6e8756dc4cd182034c6af654ba9b1f4",
+  "/system/bin/awk": "b4a945b5c29875c81073616997e5b58a007ee917ee718fe411b8550cbd94ec68",
+  "/system/bin/getfacl": "60cab0f4f9888a0b8fe95609c6ad78dd19a4596126e66513b35abf113ea872aa",
+  "/system/bin/ntpdate": "262fafd0905fecaf1a1a74929faf27645c2e64bd93f12090eea537f932756a7b",
+  "/system/bin/arp": "a761b434034337b16786729edb29dbef9ac77c2abb402b9d7cc6b04da28e07df",
+  "/system/bin/curl": "00b2913917104ba52f700f00d35a1c7eb89e8c786d420e846dfa743957c3333c",
+  "/system/bin/fullpath": "e788d1b84ea6dd0b3b36caaaf8b705584b772f94b72766574884a88af21d64e6",
+  "/system/bin/ifmcstat": "83a1de4671616b5f999da3769ef654faa49f3fa3d00403a326bcb35214fd10af",
+  "/system/bin/ifwatchd": "3905f07ae8ba90431af11644df0353d5231f0ddf6ef89d0b66dd915650341dd6",
+  "/system/bin/iperf2": "26836cc02259a915c467638863b2814e8a355bc24c09b1170b1d74933d3f315d",
+  "/system/bin/iperf3": "95d37d1e3087ce29503b6f3004760e8641e4c0c4ec00d17c46e7882be7bb2969",
+  "/system/bin/ndp": "e5fd6d5c7ec495f5434d1e43cb9e09f0765b0776b37bc5a06a1fff3812a91a8c",
+  "/system/bin/ntp-keygen": "0cda088cf6b2de2a8d21873392f27229b478541a3e069738d0b77f55cc0c933b",
+  "/system/bin/ntpq": "318ab888d0328353dbd39e5f1dcb5d10f02bd75906d7113b8a3a2c11077af5b7",
+  "/system/bin/pfctl": "450293bc2c8a1f543f473aa5fa561d14c650047f8d1ab20261688f97f6db69c8",
+  "/system/bin/route": "58c013bb00c557a083fbb7a1ee5cdc7349ffc24309b8f35ec34328e9ee2a9a1e",
+  "/system/bin/secpolmonitor": "71ff4201332d1538df8bce5f602f944a9718b1ab1dbd9a8dab2425ae285a2d9b",
+  "/system/bin/showmount": "266efd6b68ec050935ae65341a0eddba5b03375f70c0784fef227efb816ba6ad",
+  "/system/bin/sntp": "e30bea7a1f7afc4490093597367434e500b2e7fdac802681439360f8ada453c6",
+  "/system/bin/sockstat": "c325c4b15ab0aab6380a427675180acb353219a7d6e5106f614606379fd892bd",
+  "/system/bin/stty": "7d76ef23bf6099e4885204e8a7589a34d7704acd66822963e0d79b30cf8e6616",
+  "/system/bin/tcpdump": "ccfeb1071249c1fd05cf9d6b73b59936b44ae02bbf07c9a75bf8205858fa0b8d",
+  "/system/bin/top": "bec97072e2f190b737872c8e754a71a41b2b328c6bdaadc2487acbff610fb0c2",
+  "/system/bin/usb": "d0bc5e982fa7f0ff9af3c59bf15abf28e0adb82f0181bcccdc35c023f72cbda8",
+  "/system/bin/sysctl": "4ea4e7716897994e47bbd82981715fc62bc51f715b90d74647165dfc1c2156e9",
+  "/system/bin/slog2info": "af623e7eb5d25fc9e78c34b8b077c86564de72713beda35f833cdec00f469d2e",
+  "/system/bin/vi": "fa7e7025b607bbf770ea3b3bce3a4c8699d4eaa9ee7ed1d27fa6c3f1d9d7d878",
+  "/system/bin/ldd": "2b6bc69a1568de5a1391941dc8b4c61b84bc37e07067ffbf3a27fc25b3718a87",
+  "/system/bin/less": "125c8ccbbe3770c57a22dcd02d063c58c385cff7faabb233bcabe3a4d65b78e1",
+  "/system/bin/slay": "822d0aabb8d51a4749af1ecbccba225b673363439d3da813956bf70fbd08a2b7",
+  "/system/bin/bsdtar": "524ecf750b7a819edbd251ff20f44db6b4cd1fc477c4704ec539a9c78f72ead0",
+  "/system/bin/copy_settings.sh": "d11e3b392d040d9e52686aa40b34d45d306988cafb4dd802979d036a34d6207c",
+  "/system/bin/toybox": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/login": "76a67bf3ba7620b25142c39b35ef4e6a9b167fa58d4e21d773d3d78817d63344",
+  "/system/bin/su": "251c54dc0d03e4529bbbd691a6a786f48ebfa1a678bec63bb20a7ebe768a4869",
+  "/system/bin/passwd": "8a21f7524e25a10bc8571c997dde5aa50b1eee5eda4a6b71858bea30dbc09c2a",
+  "/system/bin/ping": "7eba723a7e58ce88df9b5894b0ffc2769b1dd377f7379cd5a16ca91a2949a77b",
+  "/system/bin/traceroute": "259f5f6666c5ac06c12146ae7c8a5d234f9df4f382272df38c840f4db4cad088",
+  "/system/bin/traceroute6": "9ee004a77b837cb9572bc8c7e5d0545ce7e245943c9e948e098faa2d18509771",
+  "/system/bin/fs-nfs3": "d27a9d7f9303934ecee2d4ccc236e5b7188fc2e89ca156d282cfd076cb9fe5f6",
+  "/system/bin/dumper": "24cd5d4015240abcce4388eb0bebb96923117c652922d79461e059d0ccd4a8dc",
+  "/system/bin/qconn": "ee7d9d720292778a42d95cf82654e73ad8e58a328c9e7872fbaaea6a6b8c3dab",
+  "/system/bin/mqueue": "0205e9e9245cd23bab5f674e489f8ef4bdcb958c4936d5aff53b9f8ce8049a3a",
+  "/system/bin/random": "b85cf14d4eaf16e0696bae074aaa93d080e72228ef952fa94dc9da1aa0df5590",
+  "/system/bin/ntpd": "68533ebfff9ce93c052499e9b359c81cc424a7f5776be700348adee88f5fed49",
+  "/system/bin/devb-loopback": "882e6a599713622024a7fbdbb76bbe34b7087a04c774ae3cf46ce49cc3aa3c7d",
+  "/system/bin/devb-umass": "0f914ff1c29f680b54644e26a420b02cf40e2b0d72bf71284534518c3277761a",
+  "/system/bin/devc-pty": "978d12b31b4bf4d3d05e09b7a387e7f2a9f3c793422161fe83e608ee3a31e476",
+  "/system/bin/pipe": "f415d449a3d38cf3b4e64dbf4fd713a69b0ce23a9a2afc7fc4820af7a6cfd124",
+  "/system/bin/io-sock": "c07ab5bad1f90f6e326f21d058b3cc4e6617221a10f9cfaa60a13b94f09eec5f",
+  "/system/lib/dll/mods-pci.so": "040b55b9af416e0781149c3fe66988b995c2941b9eb72e023158990a335e1f45",
+  "/system/lib/dll/mods-phy.so": "f40d1b88e666d0154294e25955431e4d2772266736469a84486b72da5fcbe4c9",
+  "/system/lib/dll/mods-usb.so": "35399315bff28508371a23e3700a98285c7990958f7bb0288c4b85db81228ffb",
+  "/system/lib/libfdt.so.1": "0965db971d3ca0b0e74cfe680b7ef18a7054bea823716b111f89c1d5aa51696d",
+  "/system/lib/libusbdci.so.2": "1d9883e766de169293b4bf37dd211aba92c69552c2ed1616ff0db1f4ebca57de",
+  "/system/bin/dhcpcd": "62facfb2bb31d6a7d904232cac25809b2149d12c6c34140ef62b02ce63d6c548",
+  "/system/etc/dhcpcd/dhcpcd.conf": "6ce9b978471ab545494c4de06a242ee993c2866fdfa67eec4ca797a705692a8d",
+  "/system/etc/dhcpcd/dhcpcd-run-hooks": "fe1d4e3bf936f3630655386c0613ae04d6e8f6585f63ec2850a90724eb35e85a",
+  "/system/etc/dhcpcd/dhcpcd-hooks/20-resolv.conf": "106acad708ba623b7e6543cceb5935f153d86b99d34966cd3d2802658e38f411",
+  "/system/etc/dhcpcd/dhcpcd.exit-hook": "4839e8f341233d0253ae9db31cf3e3dd9f99e1b2b1b464fb9a9c364d56da32bd",
+  "/system/bin/sshd": "0e99a63e7731e941eaf3254c0f41ee747cd9f68c2bd06dbdd45892edb8018ddc",
+  "/system/bin/ssh-keygen": "94edb96094bdaf5eff1f43c936a61ec71f299a0b92733738d3dfbba79f695023",
+  "/system/bin/sshd-session": "6aa116f24462364baf0bb2481672eda8d432a197de803b17d163a0f2a7716e4e",
+  "/system/bin/sshd-auth": "eb682a07021ac01c4f55f8bb8067b00df5ece96d32bbc992ce72f23008c474b9",
+  "/system/etc/ssh/sshd_config": "7c78a5ce42baa2c79a335b1bf2a7f40b0f26ed6b69029b46024d731145ef5e15",
+  "/system/bin/scp": "7083ae66da45dc955b985da444207811316537b024759343320a3bd00242f274",
+  "/system/bin/sftp-server": "19441033df3052d46aed99b24966fc01e1648518fb6cc045b1937c83d9c4436f",
+  "/system/bin/ssh": "b58aaf378a3a3d46c7a75cee9349fecb4e329e2a57c4564b96837b629f462b1d",
+  "/system/lib/libpam.so.2": "16cdbb7d39b4c78a62f05b60ab2e6f66658ce0fb576469710354e0d5a812a01a",
+  "/system/lib/dll/pam/pam_deny.so": "176bc48c11a5aab1079c0e17a052581f57f5c742f63573415a9c5433b2760251",
+  "/system/lib/dll/pam/pam_echo.so": "a9ee2b7ce7511d5356bce1aed0770689560f236c862f94c37c1020e0e4a5f115",
+  "/system/lib/dll/pam/pam_exec.so": "d75b8c78ee46daf1bdf299fcef5ac4e569f3c80e5e514ab5587ba4231c8be560",
+  "/system/lib/dll/pam/pam_group.so": "05b0fbf7078d2784e2d3b1491bfb438c14075b3ec6a78986014349deb4212dcc",
+  "/system/lib/dll/pam/pam_permit.so": "4bbbf7d37ae5b810804933ab2a9032cc1aced55b343fe965a3b52132d5cb245c",
+  "/system/lib/dll/pam/pam_qnx.so": "b0a780a6fcda8b2114813ee46137ea5ca57627c96c9198aecd5ee339568725eb",
+  "/system/lib/dll/pam/pam_rootok.so": "d3bda0babc74cbea630c1fa384d8b944c98179637979686038a1af94f11600d8",
+  "/system/lib/dll/pam/pam_self.so": "152adde5ca1f07d27e0719307acbe38649372f9a0bba5e2bcdf5e203e37a33ec",
+  "/system/etc/pam/login": "41bb200b0fed0da12441434d93df5e9c7a5c6a5f949dd713e04a1ffe9a9162a8",
+  "/system/etc/pam/sshd": "41bb200b0fed0da12441434d93df5e9c7a5c6a5f949dd713e04a1ffe9a9162a8",
+  "/system/etc/pam/passwd": "504ffcef1851f17e6d24d3eb2d0c68a2ab90228980f81388e3bf4b097ca4c113",
+  "/system/etc/pam/su": "f34641edcf95e890fbce2e07f09e2355b60a16e45ab191fa3d53ecfe95249789",
+  "/system/lib/libssl.so.3": "bd742a3db0fbf828fc3d2663cfd665f5f90f226596f9f08b78f435393c0fcd37",
+  "/system/lib/libcurl.so.12": "6fc9a8a43af39ddabdc59356a2785ef2a9b5752286ac90764921171a645b08dc",
+  "/system/lib/libcares.so.8": "af87660a8a4d1752aa412ccec8b13b518ad9c034e96a647363febd960fc742fe",
+  "/system/bin/setkey": "1cfd319388cb85b0d781ed45e2a2c27516b2af0af6d2a18fa35dfd3e072ab620",
+  "/system/lib/liblzma.so.5": "62b8c1506f1fd52d463cce31f123728decf59b10588d9090b96e8f61358363f7",
+  "/system/bin/cleanup_tmp": "9b58e301999190fd9d84eb1fda2ecd3c2989ae6bc59a3b648e6f31b5d4cdc9e0",
+  "/system/launcher/pidin": "d30929eb76aa4e79ade4ae0ffef0c09c2007946fd9f33355b2dda3b5d2d83c1d",
+  "/system/bin/splsh": "d30929eb76aa4e79ade4ae0ffef0c09c2007946fd9f33355b2dda3b5d2d83c1d",
+  "/system/bin/rootish_allowed": "a40fbaef2d0ad4fe53cccf6246c516cc6c8ed459b5293e8de4cef435483d7fd8",
+  "/system/lib/dll/pam/pam_secpol.so": "bc298ddffe739c806736b88a56e31cff3799ccdafcef370888678f5dcf13c19f",
+  "/system/etc/pam/pam_secpol_users": "2ab73e2a9f2e6fef8383261322be77e9593d7f8041697c94667360915b7917c3",
+  "/system/bin/io-usb-otg": "37676baac33ba9f16649eeb2ff235414310203498b390cd07fb38b5b0798307d",
+  "/system/lib/dll/devu-hcd-xhci.so": "b58fcf969cab076f1cc961b51d4f972e5bd3dabe8fe5684f19af72948a03d532",
+  "/system/lib/dll/devu-hcd-ehci.so": "98df0c14b71128ed4933549e9d9e1974f0118793d8ca641dde2fa2c9c4213b5b",
+  "/system/lib/dll/devu-hcd-uhci.so": "d59cf560136dfaaff5f6597a5b44acfe93b991f8fbff1aeaa3c77d230c9869ca",
+  "/system/lib/libusbdi.so.2": "e00cfc23b7264fbd5932bae80e2e1d099d12e049ca651aa09530847da6b90ee8",
+  "/system/lib/dll/fs-dos.so": "2a96d44b10292453f95084ae0b219e082be76ffc4e8b06db5e1a2f23e6b902ae",
+  "/system/etc/startup/pinger.sh": "0d8b6092ec50b3db04409f16dc1048b75c2ff62add79f225851bb40ca458c85f",
+  "/system/lib/dll/devs-vtnet_pci.so": "bccc615e43e9cab33e599412db4ab32b83e43f972941212ebd211723e02fb3de",
+  "/system/lib/libtss2-esys.so.1": "47c4ebba0e7abff65e678b531ac4c791fd8b14c2e10d5115c96c09f4479f8948",
+  "/system/lib/libtss2-mu.so.1": "8f6bc46823efe3997a4b44278aafbd6053c2fcd3dbf33ee369b7a0ed84f9cda6",
+  "/system/lib/libtss2-sys.so.1": "031c84992023153e45ce831deaf8870bd8b4d0787839e84eddfcb9aaeb5aae7f",
+  "/system/lib/libtss2-rc.so.1": "80d9b3a872e6fd2a881287ff0580a5b57976e9f838b1e50b261ddad2fe2a3cb4",
+  "/system/lib/libtss2-tctildr.so.1": "46edcabaca49bfb458004966076d6e4fe3c8a4f08969c377c8ce84d2f12f273e",
+  "/system/lib/libtss2_helper.so.1": "e71146d96349f6104950cd497f7d363bf7abcceb38a92ab4d7d59bc0521a3cb0",
+  "/system/lib/libtss2-tcti-witness.so.0": "12773f1ceb45127562fee2f4f98abad87b8d115569b3df3b5bbb73bd1a541705",
+  "/system/bin/tpm-raw": "efe0c50b456f6ad93f0bd077450694a87b50a5946ffe6c2e45c0200e3e974d6b",
+  "/system/bin/witnessd": "978ab6bb41cec44168c7809b8f714e6de23816ee760107a5899b5bb8dab02508",
+  "/system/bin/ascii": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/base64": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/basename": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/bc": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/bunzip2": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/bzcat": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/cal": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/chgrp": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/chown": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/cksum": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/clear": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/cmp": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/comm": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/cp": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/cpio": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/crc32": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/cut": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/date": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/diff": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/dirname": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/dos2unix": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/du": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/egrep": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/env": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/expand": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/expr": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/false": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/fgrep": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/file": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/find": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/fmt": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/groups": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/gunzip": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/gzip": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/hd": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/head": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/hexdump": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/id": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/install": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/link": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/logname": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/md5sum": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/mkdir": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/mkfifo": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/mktemp": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/more": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/mv": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/nl": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/nohup": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/od": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/paste": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/patch": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/printenv": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/printf": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/pwd": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/readlink": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/realpath": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/rmdir": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/sed": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/seq": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/sha1sum": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/sleep": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/sort": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/split": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/stat": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/strings": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/tail": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/tar": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/tee": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/test": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/time": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/timeout": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/touch": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/tr": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/true": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/truncate": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/tty": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/uname": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/uniq": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/unix2dos": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/unlink": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/uudecode": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/uuencode": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/uuidgen": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/wc": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/which": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/whoami": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/xargs": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/xxd": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/yes": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/system/bin/zcat": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
+  "/data/var/etc/resolv.conf": "83ec642cfe4e6b0a3af6c2cdf73059efa82942f8721bc4ef78880391e7799e98",
+  "/data/var/etc/profile": "f2a14885f8f94772c9339ca53f6ecb3742f2a36d2275fbd1b8f35892cd102653",
+  "/data/var/etc/build.date": "eca936669a28c44285a02e9c4a338130af9827eb64b32374b2cb64549680c945",
+  "/data/var/etc/passwd": "ed7ede1ed9261c7960d9d9f5ea2ea42c4b2f8a3881a5f263e433d6c88acc3541",
+  "/data/var/etc/shadow": "ad104356ca871e4a47de5fa8a22fb951bebfa5979de0f2a3757273d0de5ec82a",
+  "/data/var/etc/group": "f9bdd5a011cc8b3f5b1741e80b7784ce5666caaeb70639a5adbedf632f4bc507",
+  "/data/var/etc/default/passwd": "70a20bcf6bf666e482b2af41cfb2fcf9b0601e2d8da164883f507ca3e7cbaf49",
+  "/data/var/etc/settings/network": "0d608d58383efbc0ea7559a286b7b08b244ab1c71a590a4378f6c306031bf610",
+  "/data/var/etc/hosts": "336de0d20e14a6e526e147580ef5b0a7167a4ff4ebd788222d71e4c238e7ab2e",
+  "/data/var/etc/protocols": "5325c2e99020cb7b4bb43717f8b4bc14440999131d4abd61b4d8a438f68b7047",
+  "/data/var/etc/services": "0b208005b8da16346b4896d2d2ea10cdb5f81254ee7e2171c3a362689e09adac",
+  "/data/var/etc/system/config/pci/pcidatabase.com-tab_delimited.txt": "92489d66dbf86103a56a08108fe360ae308de48b542e696f5f20cfabb6108464"
+ },
+ "replaced": [
+  "/system/etc/ssh/sshd_config"
+ ],
+ "ifs_authenticode": "6d91b0b693b7f947b0905a5241badcf55ea76dcea07e25f98dd699d85baf2559",
+ "gpt_event": "3296d24e56bb1c7349acf934a26292a38415fa398c45e6357666545e6001250d",
+ "release": {
+  "pcr_mask": 816,
+  "approved_policy": "08566875957bddde5f0a949397b8c3097153f8557e74f279866328ee72c9146a",
+  "release_x": "5c4c9c7f6a8437782f8f8454126bf22e031d9ae2de21b24bf8822d6bb35ec283",
+  "release_y": "ba6c92f3ddebfe37409b5a2f059607037154093054c8fc69ae7e4eab6f3361c2"
+ }
+}
