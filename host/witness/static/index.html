@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Witness · Fleet attestation</title>
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="#/" aria-label="Witness, fleet overview">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M16 2.5 4.5 7v8.2c0 7.1 4.9 12.6 11.5 14.3 6.6-1.7 11.5-7.2 11.5-14.3V7L16 2.5Z" fill="currentColor"/>
+        <path d="M9.5 16.2s2.6-4.4 6.5-4.4 6.5 4.4 6.5 4.4-2.6 4.4-6.5 4.4-6.5-4.4-6.5-4.4Z" fill="none" stroke="var(--brand-ink)" stroke-width="1.8" stroke-linejoin="round"/>
+        <circle cx="16" cy="16.2" r="2.1" fill="var(--brand-ink)"/>
+      </svg>
+      <span class="brand-text"><strong>Witness</strong><span>Fleet attestation</span></span>
+    </a>
+    <div class="mode" id="mode" aria-live="off"></div>
+  </div>
+</header>
+<div class="context">
+  <div class="wrap" id="context"></div>
+</div>
+<main id="main" class="wrap" tabindex="-1">
+  <div id="view" class="view"><p class="loading">Loading fleet…</p></div>
+</main>
+<footer class="wrap footer">
+  <p>Witness checks each device's TPM 2.0 quote and event log against reference values computed from the build output of the released image.
+  The device secret state is reported by the on-device agent; it is shown for information and is not part of the signed quote.</p>
+</footer>
+<div id="announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

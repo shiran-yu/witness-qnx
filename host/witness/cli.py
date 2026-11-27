@@ -4,6 +4,8 @@
   witness reference <image-dir> [-o reference.json]      reference values from the build output
   witness enroll  --device HOST:PORT -r reference.json   record AK + firmware baseline (known-good boot)
   witness verify  --device HOST:PORT -r reference.json   challenge, appraise, print the verdict
+  witness dashboard -r reference.json --device NAME=HOST:PORT [--device ...]   fleet web dashboard
+  witness dashboard --replay tests/fixtures              the dashboard on captured evidence (no QNX, no TPM)
 """
 import argparse
 import json
@@ -63,7 +65,27 @@ def main(argv=None) -> int:
         command.add_argument("--json", action="store_true", help="print the verdict as JSON")
         command.add_argument("--save", metavar="FILE", help="also save the nonce and raw attestation (evidence)")
 
+    dashboard = commands.add_parser("dashboard", help="serve the fleet dashboard (re-verifies every --interval s)")
+    dashboard.add_argument("-r", "--reference", help="reference.json (replay: defaults to DIR/reference.json)")
+    dashboard.add_argument("--state", default=".witness", help="directory for enrollment records")
+    dashboard.add_argument("--device", action="append", default=[], metavar="NAME=HOST:PORT")
+    dashboard.add_argument("--replay", metavar="DIR", help="serve captured attestation-*.json, verified offline")
+    dashboard.add_argument("--environment", help="environment label shown on the page, e.g. 'QEMU, software TPM'")
+    dashboard.add_argument("--host", default="127.0.0.1")
+    dashboard.add_argument("--port", type=int, default=8650)
+    dashboard.add_argument("--interval", type=float, default=10.0, help="seconds between re-verifications")
+
     args = parser.parse_args(argv)
+    if args.command == "dashboard":
+        from .dashboard import live_fleet, replay_fleet, serve
+        if args.replay:
+            fleet = replay_fleet(args.replay, args.reference, args.interval, args.environment)
+        elif args.reference and args.device:
+            fleet = live_fleet(args.reference, args.state, args.device, args.interval, args.environment)
+        else:
+            parser.error("dashboard needs --replay DIR, or -r reference.json and at least one --device")
+        serve(fleet, args.host, args.port)
+        return 0
     if args.command == "reference":
         result = build_reference(args.image_dir)
         with open(args.output, "w") as out:
