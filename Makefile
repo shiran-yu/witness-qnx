@@ -34,7 +34,7 @@ $(OUT)/witness-measure: tools/witness-measure.c lib/sha256.c lib/sha256.h | $(OU
 
 # the TCTI is linked in, not dlopen'd: a restarted agent runs only code mapped at its measured launch
 $(OUT)/witnessd: agent/witnessd.c tcti/tcti-witness.c | $(OUT)
-	$(CC) $(CFLAGS) -o $@ agent/witnessd.c tcti/tcti-witness.c -ltss2-esys -ltss2-mu -ltss2-rc -lsocket
+	$(CC) $(CFLAGS) -o $@ agent/witnessd.c tcti/tcti-witness.c -ltss2-esys -ltss2-mu -ltss2-rc -lcrypto -lsocket
 
 $(OUT)/rt-probe: tools/rt-probe.c | $(OUT)  # latency test only; not in the image
 	$(CC) $(CFLAGS) -o $@ tools/rt-probe.c

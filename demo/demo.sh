@@ -65,6 +65,12 @@ reboot_device() {
     wait_for_agent
 }
 
+# several steps in one call: demo.sh build up enroll verify ("tamper lib" as one quoted word)
+if [ $# -gt 1 ] && [ "$1" != tamper ]; then
+    for step in "$@"; do "$0" $step || exit $?; done
+    exit 0
+fi
+
 case "${1:-}" in
 build)
     command -v mkqnximage >/dev/null || { echo "source qnxsdp-env.sh first" >&2; exit 1; }
@@ -193,10 +199,12 @@ attack)
     "${SSH[@]}" 'l=/system/lib/libtss2-tcti-witness.so.0; cp $l /data/var/witness/tcti.orig;
                  echo "# swap $l, then kill the agent so its supervisor restarts it";
                  cp $l $l.new && echo "# patched" >> $l.new && mv $l.new $l;
+                 maps() { pidin -p $1 mem | grep -o "[^ /]*\.so[.0-9]*" | sort -u; };
+                 s=$(pidin -f aN | grep witnessd | awk "{print \$1}" | sort -n | head -1);
                  kill $(pidin -f aN | grep witnessd | awk "{print \$1}" | sort -n | tail -1); sleep 8;
                  a=$(pidin -f aN | grep witnessd | awk "{print \$1}" | sort -n | tail -1);
-                 if pidin -p $a mem | grep -q tcti-witness; then echo "  ALLOWED: restarted agent $a loaded it";
-                 else echo "  no effect: restarted agent $a runs the code measured at boot (the TCTI is linked in)"; fi;
+                 if [ "$(maps $a)" != "$(maps $s)" ]; then echo "  ALLOWED: restarted agent $a maps objects its supervisor does not";
+                 else echo "  no effect: restarted agent $a maps exactly what its supervisor loaded at the measured launch"; fi;
                  cp /data/var/witness/tcti.orig $l.new && mv $l.new $l && rm /data/var/witness/tcti.orig'
     ;;
 down)

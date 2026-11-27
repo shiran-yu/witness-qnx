@@ -86,7 +86,7 @@ chain: a release signed on the build host keeps the device's key, and once it ha
 itself refuses the older signed release, so "the version defined by the RXSWIN" cannot be swapped
 for a vulnerable earlier one.
 
-**Why QNX is the right foundation.** Attestation must never cost a control loop its deadline, and it
+**Why QNX is the right foundation.** Attestation must not cost a control loop its deadline, and it
 must not become a new way into the device. QNX's architecture gives both, and Witness uses it:
 
 - *Isolation by process, not by trust.* The TPM driver, the measurement tool and the agent are
@@ -100,7 +100,7 @@ must not become a new way into the device. QNX's architecture gives both, and Wi
   a root login gets neither the driver nor their types.
 - *Priority-ordered service.* A QNX server receives messages in priority order and runs at its
   client's priority. witnessd runs at priority 8, below QNX's default 10, so the TPM driver serves
-  attestation at 8 too: it never preempts normal-priority work. Measured under QEMU
+  attestation at 8 too, and the scheduler does not let it preempt work at QNX's default priority or above. Measured under QEMU
   ([demo/latency.sh](demo/latency.sh), [docs/evidence/latency.log](docs/evidence/latency.log)): a
   1 kHz loop at priority 10 while the host floods witnessd (~22 attestations/s) had 0, 1 and 2
   periods over 1 ms late in three 30 s runs, as many as idle (2, 38, 1); the same loop at priority 7,
@@ -264,7 +264,7 @@ credential. Witness's mount step handles the qnx6 image this demo uses, not QTD 
 |---|---|---|
 | TPM TIS driver | [driver/tis.c](driver/tis.c) `tis_open`, `wait_sts`, `tis_transmit` | `mmap_device_memory` (TIS registers at 0xFED40000, `PROT_NOCACHE`); `InterruptAttachThread` + `InterruptWait` with `_NTO_INTR_WAIT_FLAGS_UNMASK`, bounded by `TimerTimeout(_NTO_TIMEOUT_INTR)`; polling fallback if the interrupt self-test gets no wake-up |
 | Resource manager | [driver/main.c](driver/main.c) `io_write`, `io_read`, `io_notify`, `io_read_stats`, `main` | `dispatch_create`, two `resmgr_attach` paths (`/dev/tpm0`, `/dev/tpm0-stats`), custom OCB (`IOFUNC_OCB_T`, `iofunc_mount_t` ocb calloc/free) holding each client's response, `iofunc_notify` for `select`/`poll`, `procmgr_daemon` |
-| TSS2 TCTI | [tcti/tcti-witness.c](tcti/tcti-witness.c) `Tss2_Tcti_Witness_Init`, `Tss2_Tcti_Info` | standard TCTI v2 module: linked into `witnessd` (no library is loaded after its measured launch), and also built as `libtss2-tcti-witness.so.0` for any `libtss2-tctildr` client (`witness:/dev/tpm0`) |
+| TSS2 TCTI | [tcti/tcti-witness.c](tcti/tcti-witness.c) `Tss2_Tcti_Witness_Init`, `Tss2_Tcti_Info` | standard TCTI v2 module: linked into `witnessd` (a restarted agent maps only what its supervisor loaded at launch; `demo.sh attack` checks it), and also built as `libtss2-tcti-witness.so.0` for any `libtss2-tctildr` client (`witness:/dev/tpm0`) |
 | Measurement | [tools/witness-measure.c](tools/witness-measure.c) `pcr_extend`, `measure_tree`, `measure_manifest` | runs from the IFS (`/proc/boot`), walks `/system` in sorted order (files by content, symlinks by target), raw `TPM2_PCR_Extend` through `/dev/tpm0`, event log in `/dev/shmem` |
 | Attestation agent | [agent/witnessd.c](agent/witnessd.c) `create_attestation_key`, `create_device_key`, `device_key_sign`, `policy_release_number`, `record_release_number`, `answer`, `flush_stale_handles`, `main` (supervisor) | QNX TCG stack from the SDP (`libtss2-esys`, `-mu`, `-rc`) over the linked-in TCTI; `TPM2_Quote`; device key: `Create` with a `PolicyAuthorize` (release key) + `PolicyPCR` (PCR 0, 2, 7) authPolicy, `Load`, `Sign` in a policy session (`PolicyPCR` → `LoadExternal` + `VerifySignature` of the signed release policy → `PolicyAuthorize` → `PolicyPCR`), `Certify` by the AK; `fork` supervisor and `alarm` watchdog |
 | Boot customisation | [image/witness-image.sh](image/witness-image.sh) | `mkqnximage` snippets: driver started in the IFS script before the system partition is mounted; measurement in `startup_postfs`; application measurement and `witnessd` in `post_start`; IFS load address for current OVMF ([image/uefi/definitions.zz_witness](image/uefi/definitions.zz_witness)) |

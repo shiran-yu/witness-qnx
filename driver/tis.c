@@ -164,6 +164,26 @@ int tis_open(struct tis *t, uint64_t paddr, int irq, int verbose)
             static const uint8_t get_random[] = {0x80, 0x01, 0, 0, 0, 12, 0, 0, 0x01, 0x7B, 0, 8};
             uint8_t response[64];
             long r = tis_transmit(t, get_random, sizeof get_random, response, sizeof response);
+            if (r >= 0 && t->stats.irq_wakeups == 0 && (rd32(t, TIS_INTF_CAPS) & INT_LOCALITY_CHANGE)) {
+                /* A fast reply never blocks: make the TPM raise localityChange and wait on the line once, bounded.
+                 * Unmask first: an edge-triggered line that fires while masked is lost. */
+                release_locality(t);
+                wr32(t, TIS_INT_STATUS, rd32(t, TIS_INT_STATUS));
+                wr32(t, TIS_INT_ENABLE, INT_GLOBAL_ENABLE | INT_LOCALITY_CHANGE);
+                InterruptUnmask(irq, id);
+                wr8(t, TIS_ACCESS, ACCESS_REQUEST_USE);
+                uint64_t bound = 200 * 1000000ull;
+                TimerTimeout(CLOCK_MONOTONIC, _NTO_TIMEOUT_INTR, NULL, &bound, NULL);
+                if (InterruptWait(0, NULL) == 0)
+                    t->stats.irq_wakeups++;
+                else
+                    InterruptMask(irq, id); /* keep the mask count balanced for the next UNMASK wait */
+                LOG(t, "self-test: localityChange interrupt %s (int_status 0x%x)\n",
+                    t->stats.irq_wakeups ? "seen" : "not seen", rd32(t, TIS_INT_STATUS));
+                wr32(t, TIS_INT_ENABLE, 0);
+                wr32(t, TIS_INT_STATUS, rd32(t, TIS_INT_STATUS));
+                release_locality(t);
+            }
             if (r < 0 || t->stats.irq_wakeups == 0) {
                 LOG(t, "no interrupt seen on line %d during self-test; falling back to polling\n", irq);
                 wr32(t, TIS_INT_ENABLE, 0);

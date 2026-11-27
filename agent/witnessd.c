@@ -7,11 +7,11 @@
  *
  * On start it derives the attestation key (AK: ECC P-256, restricted signing, from the endorsement
  * hierarchy, so the same key comes back on every boot of the same TPM) and loads the device key: an
- * ECC P-256 signing key whose only authorisation is PolicyPCR over PCR 0,2,4,5,7,8,9 (firmware, boot
- * image, disk, system partition, applications). The TPM lets it sign only in the provisioned boot
- * state, so a signature with it over the verifier's nonce proves that state, and a fleet service can
- * use it as the device's credential. If no device key exists yet (first boot in the factory), it
- * creates one.
+ * ECC P-256 signing key usable only under PolicyAuthorize by the build host's release key (a signed
+ * PolicyPCR over PCR 4,5,8,9 plus PolicyNV over the anti-rollback bits, per release), then PolicyPCR over
+ * this device's firmware (PCR 0,2,7). So a signature with it over the verifier's nonce proves a
+ * released, non-rolled-back boot state, and a fleet service can use it as the device's credential.
+ * If no device key exists yet (first boot in the factory), it creates one.
  *
  * Protocol (TCP, one request per connection):  "ATTEST <nonce-hex>\n"  ->  one JSON object
  *   ak_public  TPM2B_PUBLIC (hex)     quote      TPMS_ATTEST (hex)    signature  TPMT_SIGNATURE (hex)
@@ -39,6 +39,7 @@
 #include <tss2/tss2_mu.h>
 #include <tss2/tss2_rc.h>
 #include <tss2/tss2_tcti.h>
+#include <openssl/crypto.h>
 
 TSS2_RC Tss2_Tcti_Witness_Init(TSS2_TCTI_CONTEXT *tcti_context, size_t *size, const char *config); /* tcti/tcti-witness.c */
 
@@ -913,6 +914,10 @@ int main(int argc, char **argv)
         fprintf(stderr, "witnessd: cannot lower priority to %d\n", AGENT_PRIORITY);
     signal(SIGPIPE, SIG_IGN);
     signal(SIGALRM, watchdog_expired);
+    /* OpenSSL (under ESYS) initialised once, before any fork and without openssl.cnf: a restarted agent inherits
+     * it and never reads a config file or provider module root may have changed since the measured boot */
+    if (!OPENSSL_init_crypto(OPENSSL_INIT_NO_LOAD_CONFIG | OPENSSL_INIT_ADD_ALL_DIGESTS, NULL))
+        fprintf(stderr, "witnessd: OpenSSL initialisation failed\n");
     if (!foreground && fork() > 0)
         return EXIT_SUCCESS;
 
