@@ -99,6 +99,18 @@ After `tamper config` and a reboot:
 
 After `tamper app` (the attestation agent binary replaced): `CHANGED PCR 9 /system/bin/witnessd`.
 
+### Fleet dashboard
+
+```bash
+cd host
+uv run witness dashboard -r ../.work/reference.json --state ../.work/state --device ecu-01=127.0.0.1:10023
+uv run witness dashboard --replay tests/fixtures     # no QNX or TPM needed: captured evidence, verified offline
+```
+
+Open http://127.0.0.1:8650/. Each device is re-verified every 10 s; the detail page shows the trust
+chain in boot order (firmware, boot image, disk, system partition, applications), the file that
+changed with expected and measured digests, the replayed event log and PCR 0-9.
+
 ## Evidence of QNX use
 
 All target code is C11 built with `qcc -Vgcc_ntox86_64` for QNX 8.0 ([Makefile](Makefile), `-Werror`,
