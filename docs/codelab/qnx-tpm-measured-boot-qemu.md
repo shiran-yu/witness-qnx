@@ -179,8 +179,9 @@ Compare it with the value from the target. They match.
 ## Change the boot script, watch PCR 4 change
 Duration: 3:00
 
-Add one line to `local/snippets/ifs_start.tpm`, run `mkqnximage --build` again, reboot, and read
-PCR 4 again. The prediction and the TPM both change, and still match each other: the firmware
+Add one line to `local/snippets/ifs_start.tpm`, quit QEMU (`Ctrl-a x`), run `mkqnximage --build`
+again, start swtpm again (it exits when QEMU does; `tpmstate` keeps the TPM), start QEMU with the same
+command, and read PCR 4 again. The prediction and the TPM both change, and still match each other: the firmware
 measured the new IFS. A device whose PCR 4 does not match your build is not running your IFS.
 
 ## Where to go next
