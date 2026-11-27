@@ -1,5 +1,5 @@
 # docs/codelab/qnx-tpm-measured-boot-qemu.md followed as written from a fresh clone, 2026-11-27
-# QNX SDP 8.0, QEMU 10.2.1, swtpm, OVMF_CODE_4M.fd; KVM
+# QNX SDP 8.0, QEMU 10.2.1, swtpm, OVMF_CODE_4M.fd; no KVM on this host at the time: -cpu max instead of -enable-kvm -cpu host (the codelab's note)
 
 ## clone and build
 + git clone https://github.com/shiran-yu/witness-qnx witness
@@ -7,21 +7,28 @@ qcc -Vgcc_ntox86_64 -O2 -g -Wall -Wextra -Werror -std=gnu11 -D_QNX_SOURCE -fstac
 qcc -Vgcc_ntox86_64 -O2 -g -Wall -Wextra -Werror -std=gnu11 -D_QNX_SOURCE -fstack-protector-strong -D_FORTIFY_SOURCE=2 -o build/x86_64/tpm-raw tools/tpm-raw.c
 qcc -Vgcc_ntox86_64 -O2 -g -Wall -Wextra -Werror -std=gnu11 -D_QNX_SOURCE -fstack-protector-strong -D_FORTIFY_SOURCE=2 -shared -fPIC -Wl,-soname,libtss2-tcti-witness.so.0 -o build/x86_64/libtss2-tcti-witness.so.0 tcti/tcti-witness.c
 qcc -Vgcc_ntox86_64 -O2 -g -Wall -Wextra -Werror -std=gnu11 -D_QNX_SOURCE -fstack-protector-strong -D_FORTIFY_SOURCE=2 -Ilib -o build/x86_64/witness-measure tools/witness-measure.c lib/sha256.c
-qcc -Vgcc_ntox86_64 -O2 -g -Wall -Wextra -Werror -std=gnu11 -D_QNX_SOURCE -fstack-protector-strong -D_FORTIFY_SOURCE=2 -o build/x86_64/witnessd agent/witnessd.c -ltss2-esys -ltss2-mu -ltss2-rc -ltss2-tctildr -lsocket
+qcc -Vgcc_ntox86_64 -O2 -g -Wall -Wextra -Werror -std=gnu11 -D_QNX_SOURCE -fstack-protector-strong -D_FORTIFY_SOURCE=2 -o build/x86_64/witnessd agent/witnessd.c tcti/tcti-witness.c -ltss2-esys -ltss2-mu -ltss2-rc -lcrypto -lsocket
 qcc -Vgcc_ntox86_64 -O2 -g -Wall -Wextra -Werror -std=gnu11 -D_QNX_SOURCE -fstack-protector-strong -D_FORTIFY_SOURCE=2 -o build/x86_64/rt-probe tools/rt-probe.c
 
-## boot console (TPM lines)
+## boot (first): console
 ---> Starting TPM driver
 dev-tpm-tis: intf_caps 0x30000697 int_vector 5
+dev-tpm-tis: self-test: localityChange interrupt seen (int_status 0x4)
 dev-tpm-tis: TPM 2.0 at 0xfed40000 vendor 0x1014 device 0x0001 rev 1, interrupt driven
-Startup complete
-QNX noname 8.0.0 2026/10/30-09:10:05EDT x86pc x86_64
+## PCR 4 read on the target (tpm-raw PCR_Read)
+80010000003e00000000000000a400000001000b031000000000000100208d5b75a576a67e4927c18257c6b7f621408ec43d85865b05d7e3f11258629256
+## PCR 4 predicted on the host from output/ifs.bin
+8d5b75a576a67e4927c18257c6b7f621408ec43d85865b05d7e3f11258629256
 
-## target: tpm-raw 8001000000140000017e00000001000b03100000 (TPM2_PCR_Read, SHA-256 PCR 4)
-80010000003e000000000000014800000001000b031000000000000100205b635faa38a8702324adf4c1794da5c936028f905c49d269118ba15233bfee71
-
-## host prediction from output/ifs.bin (event string, separator, Authenticode digest)
-5b635faa38a8702324adf4c1794da5c936028f905c49d269118ba15233bfee71
-
-## result
-PCR 4 on the target equals the prediction: 5b635faa38a8702324adf4c1794da5c936028f905c49d269118ba15233bfee71
+## change the boot script, rebuild, restart swtpm and QEMU
++ echo '    display_msg "---> boot script changed"' >> local/snippets/ifs_start.tpm
+## boot (changed): console
+---> Starting TPM driver
+dev-tpm-tis: intf_caps 0x30000697 int_vector 5
+dev-tpm-tis: self-test: localityChange interrupt seen (int_status 0x4)
+dev-tpm-tis: TPM 2.0 at 0xfed40000 vendor 0x1014 device 0x0001 rev 1, interrupt driven
+---> boot script changed
+## PCR 4 read on the target (tpm-raw PCR_Read)
+80010000003e00000000000001ec00000001000b031000000000000100202ee8a44c9b28e2ba699e96dbaf6e67cfdb4fa350ccbe7e9a3da18dd3d90e5f21
+## PCR 4 predicted on the host from output/ifs.bin
+2ee8a44c9b28e2ba699e96dbaf6e67cfdb4fa350ccbe7e9a3da18dd3d90e5f21

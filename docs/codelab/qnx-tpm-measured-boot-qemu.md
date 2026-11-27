@@ -35,8 +35,9 @@ PCR 4 changes. This is the first link of measured boot.
 - `qemu-system-x86_64` (tested with 10.2.1), `swtpm` (0.10.1), OVMF (`ovmf` package, 2025.11)
 - `git`, `make`, and Python 3.10+ with `uv`
 
-Every command below was run as written, from a fresh clone, on 2026-11-27: the PCR 4 that QNX read
-from the TPM equalled the host's prediction
+Every command below was run as written, from a fresh clone, on 2026-11-27, the last step included:
+the PCR 4 that QNX read from the TPM equalled the host's prediction, and after the boot script
+changed both moved to the same new value
 ([run log](https://github.com/shiran-yu/witness-qnx/blob/main/docs/evidence/codelab-run.log)).
 
 ## Get the code and build the TPM driver
