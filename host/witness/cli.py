@@ -69,7 +69,8 @@ def main(argv=None) -> int:
             json.dump(result, out, indent=1)
         print(f"wrote {args.output}: boot={result['boot_mode']} "
               + " ".join(f"PCR{k}={v[:12]}…" for k, v in sorted(result["pcr"].items()))
-              + f", {len(result['pcr8_events'])} expected PCR 8 events, {len(result['files'])} files")
+              + f", {len(result['events']['8'])} PCR 8 + {len(result['events']['9'])} PCR 9 expected events,"
+              + f" {len(result['files'])} files")
         return 0
 
     reference_values = json.load(open(args.reference))

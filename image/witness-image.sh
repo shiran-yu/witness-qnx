@@ -15,7 +15,7 @@ BUILD="$ROOT/build/x86_64"
 SNIPPETS="$IMAGE_DIR/local/snippets"
 
 [ -d "$SNIPPETS" ] || { echo "witness-image: $IMAGE_DIR is not a mkqnximage directory (run mkqnximage once)" >&2; exit 1; }
-for f in dev-tpm-tis witness-measure libtss2-tcti-witness.so.0 tpm-raw; do
+for f in dev-tpm-tis witness-measure libtss2-tcti-witness.so.0 tpm-raw witnessd; do
     [ -f "$BUILD/$f" ] || { echo "witness-image: $BUILD/$f missing; run make first" >&2; exit 1; }
 done
 
@@ -30,6 +30,7 @@ cat > "$SNIPPETS/ifs_files.witness" <<EOF
 [perms=0555] dev-tpm-tis=$BUILD/dev-tpm-tis
 [perms=0555] witness-measure=$BUILD/witness-measure
 [perms=0444] witness.manifest=$HERE/witness.manifest
+[perms=0444] witness-apps.manifest=$HERE/witness-apps.manifest
 EOF
 
 # 3. IFS script: start the driver before anything from the (not yet measured) system partition runs
@@ -73,14 +74,19 @@ lib/dll/tabrm_rm_mod_intel.so=lib/dll/tabrm_rm_mod_intel.so
 [perms=0555] bin/tpm2_startup=usr/bin/tpm2_startup
 lib/libtss2-tcti-witness.so.0=$BUILD/libtss2-tcti-witness.so.0
 [perms=0555] bin/tpm-raw=$BUILD/tpm-raw
+[perms=0555] bin/witnessd=$BUILD/witnessd
 [perms=0444] etc/witness/tabrm.cfg=$HERE/tabrm.cfg
 EOF
 
-# 6. post start: resource manager over our TCTI
+# 6. post start: resource manager over our TCTI; application layer measured into PCR 9, then started
 cat > "$SNIPPETS/post_start.witness" <<'EOF'
 echo "---> Witness: starting tabrm (/dev/tpmrm0) over libtss2-tcti-witness"
 tabrm -C /system/etc/witness/tabrm.cfg
 waitfor /dev/tpmrm0 5
+echo "---> Witness: measuring applications into PCR 9"
+/proc/boot/witness-measure -p 9 -m /proc/boot/witness-apps.manifest
+echo "---> Witness: starting attestation agent (port 7650)"
+witnessd
 EOF
 
 echo "witness-image: snippets written to $SNIPPETS"

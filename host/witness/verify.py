@@ -77,9 +77,16 @@ def appraise(attestation: dict, nonce: bytes, reference: dict, enrollment: dict 
     if not consistent:
         return verdict
 
+    if "5" in reference["pcr"]:
+        ok = pcrs[5].hex() == reference["pcr"]["5"]
+        add(Check("boot disk layout (PCR 5)", ok, "GPT partition table is the released disk image's" if ok
+                  else "boot disk partition table differs from the release"))
+        if not ok:
+            verdict.findings.append({"pcr": 5, "kind": "changed", "what": "boot disk GPT partition table"})
     if enrollment and "firmware_pcrs" in enrollment:
-        changed = [i for i in FIRMWARE_PCRS if enrollment["firmware_pcrs"].get(str(i)) != pcrs[i].hex()]
-        add(Check("firmware (PCR 0-3,5-7)", not changed,
+        firmware = [i for i in FIRMWARE_PCRS if str(i) not in reference["pcr"]]
+        changed = [i for i in firmware if enrollment["firmware_pcrs"].get(str(i)) != pcrs[i].hex()]
+        add(Check(f"firmware (PCR {','.join(map(str, firmware))})", not changed,
                   "same firmware and configuration as at enrollment" if not changed
                   else f"firmware state changed in PCR {', '.join(map(str, changed))}"))
         for i in changed:
@@ -108,26 +115,28 @@ def appraise(attestation: dict, nonce: bytes, reference: dict, enrollment: dict 
         if not ok:
             return verdict
 
-    expected = reference["pcr8_events"]
-    actual = [e for e in events if e["pcr"] == 8]
-    by_path = {e["path"]: e for e in expected}
-    for event in actual:
-        want = by_path.get(event["path"])
-        if want is None:
-            verdict.findings.append({"pcr": 8, "kind": "unexpected", "what": event["path"], "actual": event["sha256"]})
-        elif want["sha256"] != event["sha256"]:
-            kind = "missing" if event["type"] == "missing" else "changed"
-            verdict.findings.append({"pcr": 8, "kind": kind, "what": event["path"],
-                                     "expected": want["sha256"], "actual": event["sha256"]})
-    seen = {e["path"] for e in actual}
-    for want in expected:
-        if want["path"] not in seen:
-            verdict.findings.append({"pcr": 8, "kind": "not measured", "what": want["path"]})
-    order_ok = [e["path"] for e in actual] == [e["path"] for e in expected]
-    pcr8_ok = pcrs[8].hex() == reference["pcr"]["8"]
-    add(Check("system partition (PCR 8)", pcr8_ok and order_ok,
-              f"{len(actual)} measurements match the release" if pcr8_ok and order_ok
-              else f"{len([f for f in verdict.findings if f['pcr'] == 8])} difference(s) from the release"))
+    for pcr, label in ((8, "system partition (PCR 8)"), (9, "applications (PCR 9)")):
+        expected = reference["events"][str(pcr)]
+        actual = [e for e in events if e["pcr"] == pcr]
+        before = len(verdict.findings)
+        by_path = {e["path"]: e for e in expected}
+        for event in actual:
+            want = by_path.get(event["path"])
+            if want is None:
+                verdict.findings.append({"pcr": pcr, "kind": "unexpected", "what": event["path"],
+                                         "actual": event["sha256"]})
+            elif want["sha256"] != event["sha256"]:
+                kind = "missing" if event["type"] == "missing" else "changed"
+                verdict.findings.append({"pcr": pcr, "kind": kind, "what": event["path"],
+                                         "expected": want["sha256"], "actual": event["sha256"]})
+        seen = {e["path"] for e in actual}
+        for want in expected:
+            if want["path"] not in seen:
+                verdict.findings.append({"pcr": pcr, "kind": "not measured", "what": want["path"]})
+        ok = pcrs[pcr].hex() == reference["pcr"][str(pcr)] and \
+            [e["path"] for e in actual] == [e["path"] for e in expected]
+        add(Check(label, ok, f"{len(actual)} measurement(s) match the release" if ok
+                  else f"{len(verdict.findings) - before} difference(s) from the release"))
 
     verdict.trusted = all(c.ok for c in verdict.checks)
     return verdict
