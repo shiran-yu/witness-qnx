@@ -33,7 +33,7 @@
 
   const SECRET = {
     unsealed: { cls: 'unsealed', text: 'Released', icon: 'unlock' },
-    locked: { cls: 'locked', text: 'Locked by the TPM', icon: 'lock' },
+    locked: { cls: 'locked', text: 'Locked', icon: 'lock' },  // unproven: the agent reports it, no signature shows it
     'released to an old release': { cls: 'error', text: 'Released to an old signed release', icon: 'alert' },
     error: { cls: 'error', text: 'Error', icon: 'alert' },
   };
