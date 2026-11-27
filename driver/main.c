@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -117,6 +118,39 @@ static int io_notify(resmgr_context_t *ctp, io_notify_t *msg, RESMGR_OCB_T *ocb)
     return iofunc_notify(ctp, msg, notify_list, trig, NULL, NULL);
 }
 
+/* <path>-stats: read-only text with the driver's counters, e.g. `cat /dev/tpm0-stats` */
+static iofunc_attr_t stats_attr;
+
+static int io_read_stats(resmgr_context_t *ctp, io_read_t *msg, RESMGR_OCB_T *ocb)
+{
+    static char text[512];
+    int status = iofunc_read_verify(ctp, msg, &ocb->hdr, NULL);
+    if (status != EOK)
+        return status;
+    int length = snprintf(text, sizeof text,
+                          "mode        %s\n"
+                          "irq         %d\n"
+                          "vendor      0x%04x\n"
+                          "device      0x%04x\n"
+                          "revision    %u\n"
+                          "commands    %" PRIu64 "\n"
+                          "errors      %" PRIu64 "\n"
+                          "irq_wakeups %" PRIu64 "\n"
+                          "last_us     %" PRIu64 "\n"
+                          "max_us      %" PRIu64 "\n",
+                          tpm.irq >= 0 ? "interrupt" : "polled", tpm.irq, tpm.did_vid & 0xFFFF, tpm.did_vid >> 16,
+                          tpm.rid, tpm.stats.commands, tpm.stats.errors, tpm.stats.irq_wakeups,
+                          tpm.stats.last_ns / 1000, tpm.stats.max_ns / 1000);
+    off_t offset = ocb->hdr.offset;
+    size_t n = offset < length ? (size_t)(length - offset) : 0;
+    if (n > _IO_READ_GET_NBYTES(msg))
+        n = _IO_READ_GET_NBYTES(msg);
+    SETIOV(ctp->iov, text + offset, n);
+    ocb->hdr.offset += n;
+    _IO_SET_READ_NBYTES(ctp, n);
+    return _RESMGR_NPARTS(n ? 1 : 0);
+}
+
 static int io_close_ocb(resmgr_context_t *ctp, void *reserved, RESMGR_OCB_T *ocb)
 {
     iofunc_notify_remove(ctp, notify_list);
@@ -160,7 +194,7 @@ int main(int argc, char **argv)
         }
     }
 
-    int rc = tis_open(&tpm, paddr, irq, 1);
+    int rc = tis_open(&tpm, paddr, irq, verbose > 1 ? verbose : 1);
     if (rc) {
         fprintf(stderr, "dev-tpm-tis: no usable TPM at 0x%llx: %s\n", (unsigned long long)paddr, strerror(-rc));
         return EXIT_FAILURE;
@@ -195,6 +229,17 @@ int main(int argc, char **argv)
         fprintf(stderr, "dev-tpm-tis: resmgr_attach(%s): %s\n", path, strerror(errno));
         return EXIT_FAILURE;
     }
+
+    static resmgr_connect_funcs_t stats_connect_funcs;
+    static resmgr_io_funcs_t stats_io_funcs;
+    char stats_path[PATH_MAX];
+    iofunc_func_init(_RESMGR_CONNECT_NFUNCS, &stats_connect_funcs, _RESMGR_IO_NFUNCS, &stats_io_funcs);
+    stats_io_funcs.read = io_read_stats;
+    iofunc_attr_init(&stats_attr, S_IFREG | 0444, NULL, NULL);
+    snprintf(stats_path, sizeof stats_path, "%s-stats", path);
+    if (resmgr_attach(dpp, &rattr, stats_path, _FTYPE_ANY, 0, &stats_connect_funcs, &stats_io_funcs,
+                      &stats_attr) == -1)
+        fprintf(stderr, "dev-tpm-tis: resmgr_attach(%s): %s\n", stats_path, strerror(errno));
     if (!foreground && procmgr_daemon(EXIT_SUCCESS, PROCMGR_DAEMON_NOCLOSE | PROCMGR_DAEMON_NODEVNULL) == -1)
         perror("dev-tpm-tis: procmgr_daemon");
 

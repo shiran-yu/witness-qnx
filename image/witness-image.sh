@@ -36,7 +36,7 @@ EOF
 # 3. IFS script: start the driver before anything from the (not yet measured) system partition runs
 cat > "$SNIPPETS/ifs_start.witness" <<'EOF'
     display_msg "---> Witness: starting TPM driver"
-    dev-tpm-tis
+    dev-tpm-tis -i 5
     waitfor /dev/tpm0 5
 EOF
 

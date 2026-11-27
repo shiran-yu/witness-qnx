@@ -31,7 +31,10 @@ static void pause_us(unsigned us)
     nanosleep(&ts, NULL);
 }
 
-/* Poll (or wait for the IRQ) until (STS & mask) == mask. Returns 0 or -ETIMEDOUT. */
+/* Wait until (STS & mask) == mask. Returns 0 or -ETIMEDOUT.
+ * irq_bits != 0: block on the interrupt (used only while the TPM executes a command, which takes ms);
+ * irq_bits == 0: poll with backoff (register handshakes settle in microseconds and QEMU raises no
+ * stsValid interrupt for them). */
 static int wait_sts(struct tis *t, uint8_t mask, unsigned timeout_ms, uint32_t irq_bits)
 {
     uint64_t deadline = now_ns() + (uint64_t)timeout_ms * 1000000ull;
@@ -45,13 +48,20 @@ static int wait_sts(struct tis *t, uint8_t mask, unsigned timeout_ms, uint32_t i
         if (n >= deadline)
             return -ETIMEDOUT;
         if (t->irq >= 0 && irq_bits) {
-            /* Interrupt mode: block this thread until the TPM raises its line (or timeout). */
+            /* Interrupt mode: block until the TPM raises its line; re-check at least every 10 ms
+             * so a lost or misrouted interrupt costs latency, never a timeout. */
             uint64_t left = deadline - n;
+            if (left > 10000000ull)
+                left = 10000000ull;
             wr32(t, TIS_INT_ENABLE, INT_GLOBAL_ENABLE | irq_bits);
             sts = rd8(t, TIS_STS); /* re-check after enabling, the event may already be there */
             if ((sts & mask) != mask) {
-                if (InterruptWait(_NTO_INTR_WAIT_FLAGS_UNMASK, &left) == 0)
+                /* InterruptWait's own timeout argument must be NULL; QNX bounds kernel blocking with TimerTimeout */
+                TimerTimeout(CLOCK_MONOTONIC, _NTO_TIMEOUT_INTR, NULL, &left, NULL);
+                if (InterruptWait(_NTO_INTR_WAIT_FLAGS_UNMASK, NULL) == 0)
                     t->stats.irq_wakeups++;
+                else if (t->verbose > 1)
+                    LOG(t, "InterruptWait: %s (int_status 0x%x)\n", strerror(errno), rd32(t, TIS_INT_STATUS));
             }
             wr32(t, TIS_INT_STATUS, rd32(t, TIS_INT_STATUS)); /* write-1-to-clear */
             continue;
@@ -143,12 +153,24 @@ int tis_open(struct tis *t, uint64_t paddr, int irq, int verbose)
         /* QNX 8.0 interrupt model: this thread becomes the interrupt service thread. */
         wr32(t, TIS_INT_ENABLE, 0);
         wr32(t, TIS_INT_STATUS, 0xFFFFFFFFu);
+        LOG(t, "intf_caps 0x%08x int_vector %u\n", rd32(t, TIS_INTF_CAPS), rd8(t, TIS_INT_VECTOR));
         int id = InterruptAttachThread(irq, _NTO_INTR_FLAGS_NO_UNMASK);
         if (id == -1) {
             LOG(t, "InterruptAttachThread(%d): %s; falling back to polling\n", irq, strerror(errno));
         } else {
             t->irq = irq;
             t->irq_id = id;
+            /* Self-test: one TPM2_GetRandom must raise at least one interrupt, else the line is wrong. */
+            static const uint8_t get_random[] = {0x80, 0x01, 0, 0, 0, 12, 0, 0, 0x01, 0x7B, 0, 8};
+            uint8_t response[64];
+            long r = tis_transmit(t, get_random, sizeof get_random, response, sizeof response);
+            if (r < 0 || t->stats.irq_wakeups == 0) {
+                LOG(t, "no interrupt seen on line %d during self-test; falling back to polling\n", irq);
+                wr32(t, TIS_INT_ENABLE, 0);
+                InterruptDetach(id);
+                t->irq = -1;
+            }
+            memset(&t->stats, 0, sizeof t->stats);
         }
     }
     LOG(t, "TPM 2.0 at 0x%llx vendor 0x%04x device 0x%04x rev %u, %s\n", (unsigned long long)paddr,
@@ -173,7 +195,7 @@ static int send_command(struct tis *t, const uint8_t *cmd, size_t len)
     int rc;
     if (!(rd8(t, TIS_STS) & STS_COMMAND_READY)) {
         wr8(t, TIS_STS, STS_COMMAND_READY);
-        if ((rc = wait_sts(t, STS_COMMAND_READY, t->timeout_b_ms, INT_COMMAND_READY)))
+        if ((rc = wait_sts(t, STS_COMMAND_READY, t->timeout_b_ms, 0)))
             return rc;
     }
     size_t sent = 0;
@@ -183,13 +205,13 @@ static int send_command(struct tis *t, const uint8_t *cmd, size_t len)
             return -EIO;
         while (burst-- && sent < len - 1)
             wr8(t, TIS_DATA_FIFO, cmd[sent++]);
-        if ((rc = wait_sts(t, STS_VALID, t->timeout_c_ms, INT_STS_VALID)))
+        if ((rc = wait_sts(t, STS_VALID, t->timeout_c_ms, 0)))
             return rc;
         if (!(rd8(t, TIS_STS) & STS_EXPECT))
             return -EIO; /* TPM thinks the command ended early: length field mismatch */
     }
     wr8(t, TIS_DATA_FIFO, cmd[sent]); /* last byte */
-    if ((rc = wait_sts(t, STS_VALID, t->timeout_c_ms, INT_STS_VALID)))
+    if ((rc = wait_sts(t, STS_VALID, t->timeout_c_ms, 0)))
         return rc;
     if (rd8(t, TIS_STS) & STS_EXPECT)
         return -EIO; /* TPM still wants data */
@@ -201,7 +223,7 @@ static long read_fifo(struct tis *t, uint8_t *buf, size_t want)
 {
     size_t got = 0;
     while (got < want) {
-        if (wait_sts(t, STS_VALID | STS_DATA_AVAIL, t->timeout_c_ms, INT_DATA_AVAIL | INT_STS_VALID))
+        if (wait_sts(t, STS_VALID | STS_DATA_AVAIL, t->timeout_c_ms, 0))
             return -ETIMEDOUT;
         unsigned burst = burst_count(t);
         if (!burst)
@@ -215,7 +237,7 @@ static long read_fifo(struct tis *t, uint8_t *buf, size_t want)
 static long recv_response(struct tis *t, uint8_t *resp, size_t max)
 {
     long rc;
-    if ((rc = wait_sts(t, STS_VALID | STS_DATA_AVAIL, t->timeout_long_ms, INT_DATA_AVAIL | INT_STS_VALID)))
+    if ((rc = wait_sts(t, STS_VALID | STS_DATA_AVAIL, t->timeout_long_ms, INT_DATA_AVAIL)))
         return rc;
     if ((rc = read_fifo(t, resp, 10)) < 0)
         return rc;
@@ -224,7 +246,7 @@ static long recv_response(struct tis *t, uint8_t *resp, size_t max)
         return -EMSGSIZE;
     if ((rc = read_fifo(t, resp + 10, size - 10)) < 0)
         return rc;
-    if (wait_sts(t, STS_VALID, t->timeout_c_ms, INT_STS_VALID) == 0 && (rd8(t, TIS_STS) & STS_DATA_AVAIL))
+    if (wait_sts(t, STS_VALID, t->timeout_c_ms, 0) == 0 && (rd8(t, TIS_STS) & STS_DATA_AVAIL))
         return -EIO; /* more data than the header announced */
     return (long)size;
 }
