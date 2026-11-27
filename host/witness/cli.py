@@ -74,6 +74,11 @@ def main(argv=None) -> int:
     reference = commands.add_parser("reference", help="compute reference values from a mkqnximage directory")
     reference.add_argument("image_dir")
     reference.add_argument("-o", "--output", default="reference.json")
+    reference.add_argument("--release-key", metavar="PEM",
+                           help="sign this release's PCR policy (writes <output>.policy for the device)")
+
+    release_key = commands.add_parser("release-key", help="create the release signing key (keep it off devices)")
+    release_key.add_argument("path")
 
     for name in ("enroll", "verify"):
         command = commands.add_parser(name)
@@ -108,8 +113,20 @@ def main(argv=None) -> int:
             parser.error("dashboard needs --replay DIR, or -r reference.json and at least one --device")
         serve(fleet, args.host, args.port)
         return 0
+    if args.command == "release-key":
+        from .release import make_release_key
+        make_release_key(args.path)
+        print(f"wrote {args.path} (keep it on the build host)")
+        return 0
     if args.command == "reference":
         result = build_reference(args.image_dir)
+        if args.release_key:
+            from .release import load_release_key, policy_file_text, sign_release
+            policy = sign_release(result, load_release_key(args.release_key))
+            result["release"] = {k: policy[k] for k in ("pcr_mask", "approved_policy", "release_x", "release_y")}
+            with open(args.output + ".policy", "w") as out:
+                out.write(policy_file_text(policy))
+            print(f"wrote {args.output}.policy: release PCR policy signed for PCR 4,5,8,9")
         with open(args.output, "w") as out:
             json.dump(result, out, indent=1)
         print(f"wrote {args.output}: boot={result['boot_mode']} "

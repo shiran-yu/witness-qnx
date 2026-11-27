@@ -109,6 +109,27 @@ TPMA_OBJECT_RESTRICTED, TPMA_OBJECT_SIGN = 0x10000, 0x40000
 TPM_CC_POLICY_PCR = 0x17F
 
 
+TPM_CC_POLICY_AUTHORIZE = 0x16A
+TPM_ECC_NIST_P256 = 0x0003
+
+
+def ecc_public_area(x: bytes, y: bytes, attributes: int = 0x00040040) -> bytes:
+    """TPMT_PUBLIC of an ECDSA-SHA256 P-256 key as TPM2_LoadExternal takes it (default: sign, userWithAuth)."""
+    return (struct.pack(">HHIH", TPM_ALG_ECC, TPM_ALG_SHA256, attributes, 0)
+            + struct.pack(">HHHHH", TPM_ALG_NULL, TPM_ALG_ECDSA, TPM_ALG_SHA256, TPM_ECC_NIST_P256, TPM_ALG_NULL)
+            + struct.pack(">H", len(x)) + x + struct.pack(">H", len(y)) + y)
+
+
+def object_name(public_area: bytes) -> bytes:
+    return struct.pack(">H", TPM_ALG_SHA256) + hashlib.sha256(public_area).digest()
+
+
+def policy_authorize_digest(key_name: bytes, policy_ref: bytes = b"") -> bytes:
+    """authPolicy satisfied by any policy that the key named `key_name` signed (TPM2_PolicyAuthorize)."""
+    digest = hashlib.sha256(bytes(32) + struct.pack(">I", TPM_CC_POLICY_AUTHORIZE) + key_name).digest()
+    return hashlib.sha256(digest + policy_ref).digest()
+
+
 def pcr_policy_digest(values: dict[int, bytes]) -> bytes:
     """The authPolicy of an object whose only authorisation is TPM2_PolicyPCR over these SHA-256 PCR values."""
     mask = sum(1 << i for i in values)

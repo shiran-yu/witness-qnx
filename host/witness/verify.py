@@ -174,7 +174,9 @@ def _check_device_key(verdict: Verdict, attestation: dict, nonce: bytes, referen
     """The device key is usable only through PolicyPCR over the released state; its signature over our nonce
     proves the TPM released it now. Its authPolicy must be exactly that policy, computed here from the release
     (PCR 4, 5, 8, 9) and the enrolled firmware (PCR 0, 2, 7), so a key re-provisioned on a tampered boot fails."""
-    name = f"device key (PCR {','.join(map(str, DEVICE_KEY_PCRS))})"
+    release = reference.get("release")
+    name = ("device key (signed release, PCR 4,5,8,9)" if release
+            else f"device key (PCR {','.join(map(str, DEVICE_KEY_PCRS))})")
     device_key = attestation.get("device_key")
     if not isinstance(device_key, dict):
         verdict.checks.append(Check(name, False, "TPM refused to release the device key: "
@@ -185,7 +187,14 @@ def _check_device_key(verdict: Verdict, attestation: dict, nonce: bytes, referen
     firmware = enrollment["firmware_pcrs"] if enrollment else {str(i): pcrs[i].hex() for i in FIRMWARE_PCRS}
     released = {i: bytes.fromhex(reference["pcr"][str(i)] if str(i) in reference["pcr"] else firmware[str(i)])
                 for i in DEVICE_KEY_PCRS}
-    bound = key.auth_policy == pcr_policy_digest(released) and key.attributes & TPMA_OBJECT_FIXEDTPM \
+    if release:  # PolicyAuthorize(release key): usable by any signed release; this one must be signed for these PCRs
+        from .release import RELEASE_PCRS, device_key_policy
+        policy = device_key_policy(bytes.fromhex(release["release_x"]), bytes.fromhex(release["release_y"]))
+        signed_for_this_release = release["approved_policy"] == pcr_policy_digest(
+            {i: bytes.fromhex(reference["pcr"][str(i)]) for i in RELEASE_PCRS}).hex()
+    else:
+        policy, signed_for_this_release = pcr_policy_digest(released), True
+    bound = key.auth_policy == policy and signed_for_this_release and key.attributes & TPMA_OBJECT_FIXEDTPM \
         and not key.attributes & TPMA_OBJECT_USERWITHAUTH
     enrolled = not enrollment or enrollment.get("device_key") in (None, device_key["public"])
     signed = signature_valid(key, DEVICE_KEY_LABEL + nonce, bytes.fromhex(device_key["signature"]))
