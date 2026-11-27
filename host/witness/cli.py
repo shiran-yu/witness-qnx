@@ -79,7 +79,7 @@ def main(argv=None) -> int:
     reference.add_argument("--release-key", metavar="PEM",
                            help="sign this release's PCR policy (writes <output>.policy for the device)")
     reference.add_argument("--release-number", type=int, metavar="N",
-                           help="anti-rollback: once release N ran, the TPM refuses releases below N (1-63)")
+                           help="required with --release-key: once release N ran, the TPM refuses releases below N (1-63)")
 
     release_key = commands.add_parser("release-key", help="create the release signing key (keep it off devices)")
     release_key.add_argument("path")
@@ -127,6 +127,8 @@ def main(argv=None) -> int:
         return 0
     if args.command == "reference":
         result = build_reference(args.image_dir, dict(item.split("=", 1) for item in args.replace))
+        if args.release_key and args.release_number is None:
+            parser.error("--release-key needs --release-number: an unnumbered release could be rolled back to")
         if args.release_key:
             from .release import load_release_key, policy_file_text, sign_release
             try:

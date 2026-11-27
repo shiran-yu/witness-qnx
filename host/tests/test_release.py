@@ -69,7 +69,8 @@ def test_rollback_to_an_older_signed_release_is_refused_by_the_tpm():
     verdict = _appraise("release/attestation-v1-rolled-back.json")
     key = next(c for c in verdict.checks if c.name == RELEASE_KEY_CHECK)
     assert not verdict.trusted and not key.ok and verdict.sealed == "locked"
-    assert "TPM refused" in key.detail  # PolicyNV: release 2 has run, so release 1's policy fails
+    # TPM_RC_POLICY from PolicyNV (a tampered boot fails PolicyPCR with TPM_RC_VALUE instead)
+    assert "TPM refused" in key.detail and "policy failure" in key.detail
 
 
 def test_release_number_is_part_of_the_signed_policy(reference):
@@ -129,3 +130,13 @@ def test_rollback_message_needs_a_proven_key():
                        load("release/enrollment.json"))
     key = next(c for c in verdict.checks if c.name == RELEASE_KEY_CHECK)
     assert key.detail == "key is not certified by this device's attestation key" and verdict.sealed == "locked"
+
+
+def test_policy_nv_digest_matches_what_the_tpm_accepted():
+    """release/reference.json's approved policy was accepted by the live (sw)TPM for its release number."""
+    from conftest import load
+    from witness.release import approved_policy
+    reference = load("release/reference.json")
+    values = {i: bytes.fromhex(reference["pcr"][str(i)]) for i in RELEASE_PCRS}
+    assert approved_policy(values, reference["release"]["release_number"]).hex() == \
+        reference["release"]["approved_policy"]

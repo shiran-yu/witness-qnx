@@ -165,7 +165,7 @@ static int write_blob(const char *path, const uint8_t *data, size_t size)
 #define RELEASE_NV_ATTRIBUTES (TPMA_NV_AUTHWRITE | TPMA_NV_AUTHREAD | TPMA_NV_NO_DA | (TPM2_NT_BITS << TPMA_NV_TPM2_NT_SHIFT))
 
 struct release {
-    uint32_t pcr_mask, number; /* number 0: a release without anti-rollback */
+    uint32_t pcr_mask, number; /* release number 1-63; a policy without one is not accepted */
     uint8_t approved[32], r[32], s[32], x[32], y[32];
     int have_key, have_policy;
 };
@@ -208,7 +208,9 @@ static void read_release_file(const char *path, struct release *release)
     if (file)
         fclose(file);
     release->have_key = (seen & 48) == 48;
-    release->have_policy = (seen & 63) == 63 && (release->pcr_mask & ~SEAL_PCR_MASK) == 0 && release->number <= 63;
+    /* numbered releases only: an unnumbered signed policy would skip PolicyNV and stay a rollback target */
+    release->have_policy = (seen & 63) == 63 && (release->pcr_mask & ~SEAL_PCR_MASK) == 0 && release->number >= 1 &&
+                           release->number <= 63;
 }
 
 static struct release read_release(void)
@@ -261,8 +263,17 @@ static TSS2_RC policy_pcr(ESYS_TR session, uint32_t mask)
 /* The anti-rollback NV index; defined (all bits clear) on first use. Close the handle with Esys_TR_Close. */
 static TSS2_RC release_counter(ESYS_TR *nv)
 {
-    if (Esys_TR_FromTPMPublic(esys, RELEASE_NV_INDEX, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, nv) == TSS2_RC_SUCCESS)
-        return TSS2_RC_SUCCESS;
+    if (Esys_TR_FromTPMPublic(esys, RELEASE_NV_INDEX, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, nv) == TSS2_RC_SUCCESS) {
+        TPM2B_NV_PUBLIC *public = NULL;
+        TSS2_RC rc = Esys_NV_ReadPublic(esys, *nv, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, &public, NULL);
+        /* defined but never written (power lost after DefineSpace): PolicyNV would fail for good */
+        if (rc == TSS2_RC_SUCCESS && !(public->nvPublic.attributes & TPMA_NV_WRITTEN))
+            rc = Esys_NV_SetBits(esys, *nv, *nv, ESYS_TR_PASSWORD, ESYS_TR_NONE, ESYS_TR_NONE, 0);
+        Esys_Free(public);
+        if (rc != TSS2_RC_SUCCESS)
+            Esys_TR_Close(esys, nv);
+        return rc;
+    }
     TPM2B_AUTH auth = {0};
     TPM2B_NV_PUBLIC public = {
         .nvPublic = {.nvIndex = RELEASE_NV_INDEX, .nameAlg = TPM2_ALG_SHA256, .attributes = RELEASE_NV_ATTRIBUTES,
@@ -466,8 +477,7 @@ static TSS2_RC device_key_sign(const uint8_t *data, size_t size, TPMT_SIGNATURE 
     }
     rc = pcr_policy_session(TPM2_SE_POLICY, release.have_key ? release.pcr_mask : SEAL_PCR_MASK, &session);
     if (rc == TSS2_RC_SUCCESS && release.have_key) {
-        if (release.number) /* the signed policy is PolicyPCR then PolicyNV */
-            rc = policy_release_number(session, release.number);
+        rc = policy_release_number(session, release.number); /* the signed policy is PolicyPCR then PolicyNV */
         if (rc == TSS2_RC_SUCCESS)
             rc = authorize_release(session, &release);
         if (rc == TSS2_RC_SUCCESS) /* then this device's enrolled firmware state */

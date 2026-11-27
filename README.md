@@ -174,7 +174,9 @@ command appended to `/etc/settings/network`, which `start_net.sh` runs as root a
 against the v2 reference, and the device key is released again, the same enrolled key. After
 `rollback` (the v1 file and its genuine signed v1 policy reinstalled): `NOT TRUSTED`, `device key:
 locked`, `FAIL device key (signed release + PCR 0,2,7) TPM refused to release the device key:
-tpm:error(2.0): policy failure in math operation or an invalid authPolicy value`; the TPM's `PolicyNV` check fails because release 2 has run.
+tpm:error(2.0): policy failure in math operation or an invalid authPolicy value`; the TPM's `PolicyNV`
+check fails because v2 has run. Checked against v1's own reference, every measurement passes (11
+of 12 checks) and only the device key fails: the boot is a genuine v1, and the TPM still refuses it.
 `restore` reinstalls v2: TRUSTED again.
 
 ### Fleet dashboard
@@ -274,7 +276,11 @@ driver chose (`interrupt driven` after its interrupt self-test, or polling):
   the stock boot script reads nothing else there as code.
 - Anti-rollback: release N's signed policy requires bits N..63 of an NV bit field (index
   `0x01005700`) to be clear, and `witnessd` sets bits 0..N-1 once the TPM has accepted release N;
-  bits can be set, never cleared. Limits: 63 release numbers per TPM; the index is defined under the
+  bits can be set, never cleared. Every release must be numbered: `witness reference --release-key`
+  refuses to sign without `--release-number`, and `witnessd` ignores an unnumbered policy (it would
+  skip `PolicyNV`). In the demo, "v1" and "v2" are the two newest numbers: each `build` and `update`
+  takes the next one (`.work/release-number`), because the swtpm state and its NV bits outlive
+  rebuilds. Limits: 63 release numbers per TPM; the index is defined under the
   owner hierarchy with an empty owner password, so code with TPM access could undefine and recreate
   it (after boot the security policy denies TPM access to everything but the measurer and the
   agent; production sets an owner password or `TPMA_NV_POLICY_DELETE`); anyone with TPM access can

@@ -1,8 +1,8 @@
 ==> cross-building Witness for QNX 8.0 x86_64
 ==> creating a UEFI QNX 8.0 image with the Witness layer
 ==> computing reference values from the build output and signing the release
-wrote <repo>/.work/reference.json.policy: release PCR policy signed for PCR 4,5,8,9, release 3 (older releases refused by the TPM)
-wrote <repo>/.work/reference.json: boot=uefi PCR4=e50b9d680e3d… PCR5=1183fca81865… PCR8=d8b43410c5b1… PCR9=ec4f469be10e…, 253 PCR 8 + 1 PCR 9 expected events, 252 files
+wrote <repo>/.work/reference.json.policy: release PCR policy signed for PCR 4,5,8,9, release 5 (older releases refused by the TPM)
+wrote <repo>/.work/reference.json: boot=uefi PCR4=a47dcbfdca89… PCR5=f9e798032778… PCR8=0ca7a904447f… PCR9=56dad5b749b2…, 253 PCR 8 + 1 PCR 9 expected events, 252 files
 started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
 ==> waiting for witnessd
 ==> delivering the signed release policy to /data/var/witness/release-policy
@@ -99,9 +99,9 @@ started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.lo
   FAIL  applications (PCR 9)         1 difference(s) from the release
   FAIL  device key (signed release + PCR 0,2,7) TPM refused to release the device key: tpm:parameter(1):value is out of range or is not correct for the context
        CHANGED  PCR 8  /system/bin/witnessd
-                  expected ba840b3cf0bf56b4…  got fd638fc41e2bc4c8…
+                  expected b498806222c5b7a8…  got 1b4f7537932c8f01…
        CHANGED  PCR 9  /system/bin/witnessd
-                  expected ba840b3cf0bf56b4…  got fd638fc41e2bc4c8…
+                  expected b498806222c5b7a8…  got 1b4f7537932c8f01…
 (exit 2)
 ==> restoring the released files
 started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
@@ -140,11 +140,12 @@ on: Operation not permitted (/proc/boot/witness-measure)
 sh: cannot create /boot/onboot: Read-only file system
   denied
 ==> build host: release v2 hardens sshd (MaxAuthTries 3); reference computed and signed with the release key
-wrote <repo>/.work/reference-v2.json.policy: release PCR policy signed for PCR 4,5,8,9, release 4 (older releases refused by the TPM)
-wrote <repo>/.work/reference-v2.json: boot=uefi PCR4=e50b9d680e3d… PCR5=1183fca81865… PCR8=dbb9c94aa1ac… PCR9=ec4f469be10e…, 253 PCR 8 + 1 PCR 9 expected events, 252 files
+wrote <repo>/.work/reference-v2.json.policy: release PCR policy signed for PCR 4,5,8,9, release 6 (older releases refused by the TPM)
+wrote <repo>/.work/reference-v2.json: boot=uefi PCR4=a47dcbfdca89… PCR5=f9e798032778… PCR8=214e7db37d29… PCR9=56dad5b749b2…, 253 PCR 8 + 1 PCR 9 expected events, 252 files
 ==> device: the update agent installs the file and the signed v2 policy, then reboots
 ==> delivering the signed release policy to /data/var/witness/release-policy
 started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
+witnessd: release 6 recorded: older releases can no longer use the device key
 127.0.0.1:10023  TRUSTED   device key: released (proven by TPM signature)
   pass  attestation key              AK 59a38e285aa23b6e
   pass  quote signature              ECDSA P-256 over TPMS_ATTEST
@@ -161,6 +162,22 @@ started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.lo
 ==> attacker reinstalls release v1 (the old sshd_config) and its genuine signed policy
 ==> rebooting
 started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
+==> checked against release v1's own reference: every measurement matches v1, and the TPM still refuses the key
+127.0.0.1:10023  NOT TRUSTED   device key: locked (agent’s claim, not verified)
+  pass  attestation key              AK 59a38e285aa23b6e
+  pass  quote signature              ECDSA P-256 over TPMS_ATTEST
+  pass  freshness                    quote carries this request's nonce
+  pass  PCR values                   PCR 0-9 match the signed digest
+  pass  boot disk layout (PCR 5)     GPT partition table is the released disk image's
+  pass  firmware (PCR 0,1,2,3,6,7)   same firmware and configuration as at enrollment
+  pass  boot image (PCR 4)           IFS is the released ifs.bin (Authenticode, measured by UEFI firmware)
+  pass  event log (PCR 8)            log replays to the quoted PCR
+  pass  event log (PCR 9)            log replays to the quoted PCR
+  pass  system and /etc (PCR 8)      253 measurement(s) match the release
+  pass  applications (PCR 9)         1 measurement(s) match the release
+  FAIL  device key (signed release + PCR 0,2,7) TPM refused to release the device key: tpm:error(2.0): policy failure in math operation or an invalid authPolicy value
+witnessd: device key LOCKED: boot state differs from the signed release (tpm:error(2.0): policy failure in math operation or an invalid authPolicy value)
+witnessd: listening on port 7650
 127.0.0.1:10023  NOT TRUSTED   device key: locked (agent’s claim, not verified)
   pass  attestation key              AK 59a38e285aa23b6e
   pass  quote signature              ECDSA P-256 over TPMS_ATTEST

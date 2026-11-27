@@ -51,10 +51,11 @@ push_release_policy() {
 }
 
 # release numbers only go up: the swtpm state (and its anti-rollback NV bits) outlives rebuilds
+# (demo names v1/v2 are the two most recent numbers; sets RELEASE_NUMBER, no subshell so exit stops the script)
 next_release_number() {
-    local n=$(( $(cat "$WORK/release-number" 2>/dev/null || echo 0) + 1 ))
-    [ "$n" -le 63 ] || { echo "release numbers used up (63): remove $IMAGE/tpmstate for a new TPM" >&2; exit 1; }
-    echo "$n" > "$WORK/release-number" && echo "$n"
+    RELEASE_NUMBER=$(( $(cat "$WORK/release-number" 2>/dev/null || echo 0) + 1 ))
+    [ "$RELEASE_NUMBER" -le 63 ] || { echo "release numbers used up (63): for a new TPM remove both $IMAGE/tpmstate and $WORK/release-number" >&2; exit 1; }
+    echo "$RELEASE_NUMBER" > "$WORK/release-number"
 }
 
 reboot_device() {
@@ -85,7 +86,8 @@ build)
     WITNESS_RELEASE_PUB="$RELEASE_KEY.pub" "$SRC/image/witness-image.sh" "$IMAGE" >/dev/null
     (cd "$IMAGE" && mkqnximage --build >"$WORK/build.log" 2>&1) || { tail "$WORK/build.log"; exit 1; }
     say "computing reference values from the build output and signing the release"
-    "${WITNESS[@]}" reference "$IMAGE" -o "$WORK/reference.json" --release-key "$RELEASE_KEY" --release-number "$(next_release_number)"
+    next_release_number
+    "${WITNESS[@]}" reference "$IMAGE" -o "$WORK/reference.json" --release-key "$RELEASE_KEY" --release-number "$RELEASE_NUMBER"
     ;;
 up)
     (cd "$IMAGE" && SSH_PORT=$SSH_PORT "$SRC/scripts/vm.sh" start)
@@ -155,7 +157,8 @@ update)
 sys.exit(hashlib.sha256(open(sys.argv[2],"rb").read()).hexdigest() != r)' "$WORK/reference.json" "$WORK/release-v2/sshd_config" \
         || { echo "sshd_config on the device is not the released one; restore first" >&2; exit 1; }
     echo "MaxAuthTries 3" >> "$WORK/release-v2/sshd_config"
-    "${WITNESS[@]}" reference "$IMAGE" -o "$WORK/reference-v2.json" --release-key "$RELEASE_KEY" --release-number "$(next_release_number)" \
+    next_release_number
+    "${WITNESS[@]}" reference "$IMAGE" -o "$WORK/reference-v2.json" --release-key "$RELEASE_KEY" --release-number "$RELEASE_NUMBER" \
         --replace /system/etc/ssh/sshd_config="$WORK/release-v2/sshd_config"
     cp "$WORK/reference.json" "$WORK/reference-v1.json" && cp "$WORK/reference.json.policy" "$WORK/reference-v1.json.policy"
     cp "$WORK/reference-v2.json" "$WORK/reference.json" && cp "$WORK/reference-v2.json.policy" "$WORK/reference.json.policy"
@@ -164,6 +167,7 @@ sys.exit(hashlib.sha256(open(sys.argv[2],"rb").read()).hexdigest() != r)' "$WORK
         < "$WORK/release-v2/sshd_config"
     push_release_policy
     reboot_device
+    grep -a 'witnessd: release' "$IMAGE/output/console.log" | tr -d '\r' || true  # "release N recorded"
     ;;
 rollback)
     # v1 is genuinely signed, but v2 has run: the TPM's anti-rollback NV bits refuse v1's policy
@@ -174,6 +178,9 @@ rollback)
     "${SSH[@]}" 'cat > /data/var/witness/release-policy' < "$WORK/reference-v1.json.policy"
     say "rebooting"
     reboot_device
+    say "checked against release v1's own reference: every measurement matches v1, and the TPM still refuses the key"
+    "${WITNESS[@]}" verify --device "$DEVICE" -r "$WORK/reference-v1.json" --state "$WORK/state" || true
+    grep -a 'witnessd: ' "$IMAGE/output/console.log" | tr -d '\r' | tail -3
     ;;
 attack)
     say "root on the device tries to extend PCR 8, run its own agent with the agent's type, borrow the measurer's type, and plant a boot hook"
