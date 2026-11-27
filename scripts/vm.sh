@@ -30,9 +30,10 @@ start() {
     local tpm=()
     if [ "$TPM" = tis ]; then
         mkdir -p "$STATE"
-        # swtpm exits when QEMU disconnects; state (EK, NV) persists in $STATE across boots
+        stop_swtpm  # a swtpm left from a crashed run would share this state directory
+        # state (EK, NV) persists in $STATE across boots; the log is per boot
         "$SWTPM" socket --tpm2 --tpmstate dir="$STATE" --ctrl type=unixio,path="$STATE/sock" \
-            --log file="$STATE/swtpm.log",level=2 --daemon
+            --log file="$STATE/swtpm.log",level=1,truncate --pid file="$STATE/swtpm.pid" --daemon
         for _ in $(seq 50); do [ -S "$STATE/sock" ] && break; sleep 0.1; done
         tpm=(-chardev socket,id=chrtpm,path="$STATE/sock" -tpmdev emulator,id=tpm0,chardev=chrtpm
              -device tpm-tis,tpmdev=tpm0)
@@ -52,9 +53,16 @@ start() {
     echo "started: ssh -p $SSH_PORT root@127.0.0.1 (console: $OUT/console.log, accel: ${accel[*]})"
 }
 
+stop_swtpm() {
+    [ -f "$STATE/swtpm.pid" ] && kill "$(cat "$STATE/swtpm.pid")" 2>/dev/null || true
+    rm -f "$STATE/swtpm.pid"
+}
+
 stop() {
     [ -f "$PIDF" ] && kill "$(cat "$PIDF")" 2>/dev/null || true
     rm -f "$PIDF"
+    sleep 0.5
+    stop_swtpm
 }
 
 status() {

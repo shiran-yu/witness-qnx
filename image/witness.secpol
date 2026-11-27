@@ -1,7 +1,8 @@
 # Witness security policy for the mkqnximage QEMU image (--secpol=secure --policy=witness.secpol).
 # Base: learned by secpolgenerate on --secpol=develop boots running the golden path, including a
 # tampered boot (locked secret). Hand-tightened: user_root_t (an ssh root login) may not connect to
-# the TPM driver (tpm_driver_t) or the resource manager (tabrm_t), nor take a Witness type.
+# the TPM driver (tpm_driver_t) nor take a Witness type. The tabrm_t rules are left from learning;
+# the image no longer ships tabrm.
 
 # There have been one or more uses of secpol_resmgr_attach() that can have
 # permissions set for them in the policy. See the mount_point entries at

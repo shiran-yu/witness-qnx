@@ -66,14 +66,16 @@ must not become a new way into the device. QNX's architecture gives both, and Wi
 
 - *Isolation by process, not by trust.* The TPM driver, the measurement tool and the agent are
   separate user-space processes behind QNX message passing. A fault in the network-facing agent does
-  not reach the driver or the kernel, and a supervisor restarts the agent if a request outlives its
-  10 s watchdog.
+  not reach the driver or the kernel, and a supervisor restarts the agent if its TPM work for one
+  request outlives a 10 s watchdog. Network clients cannot trigger that: up to 64 are read at once,
+  each must send its request within 2 s, and the watchdog starts only after the request is in.
 - *Least privilege enforced by the kernel.* The QNX security policy gives each process only what it
   needs: the driver gets its one 4 KiB register page and its interrupt; only the measurement tool and
   the agent may reach the driver; a root login gets neither the driver nor their types.
 - *Priority-ordered service.* A QNX server receives messages in priority order and runs at its
-  client's priority. The driver is single-threaded, so TPM work requested by low-priority
-  attestation runs at that low priority and is never queued ahead of more urgent work.
+  client's priority. witnessd runs at priority 8, below QNX's default 10, so the TPM driver serves
+  attestation at 8 too: it never preempts normal-priority work. This is the design; we have not
+  measured control-loop latency under attestation load on real hardware (QEMU on WSL2 is too noisy).
 - *Measure before use.* The driver and the measurement tool live in the boot image, which the
   firmware measures, and run before anything on the system partition, from QNX's own boot script.
 
@@ -175,7 +177,7 @@ TPM TIS register interface.
 |---|---|---|
 | TPM TIS driver | [driver/tis.c](driver/tis.c) `tis_open`, `wait_sts`, `tis_transmit` | `mmap_device_memory` (TIS registers at 0xFED40000, `PROT_NOCACHE`); `InterruptAttachThread` + `InterruptWait` with `_NTO_INTR_WAIT_FLAGS_UNMASK`, bounded by `TimerTimeout(_NTO_TIMEOUT_INTR)`; polling fallback if the interrupt self-test gets no wake-up |
 | Resource manager | [driver/main.c](driver/main.c) `io_write`, `io_read`, `io_notify`, `io_read_stats`, `main` | `dispatch_create`, two `resmgr_attach` paths (`/dev/tpm0`, `/dev/tpm0-stats`), custom OCB (`IOFUNC_OCB_T`, `iofunc_mount_t` ocb calloc/free) holding each client's response, `iofunc_notify` for `select`/`poll`, `procmgr_daemon` |
-| TSS2 TCTI | [tcti/tcti-witness.c](tcti/tcti-witness.c) `Tss2_Tcti_Witness_Init`, `Tss2_Tcti_Info` | standard TCTI v2 module, loaded by QNX's `libtss2-tctildr` from the name `witness:/dev/tpm0` (it also works as the TCTI module of QNX's `tabrm` resource manager) |
+| TSS2 TCTI | [tcti/tcti-witness.c](tcti/tcti-witness.c) `Tss2_Tcti_Witness_Init`, `Tss2_Tcti_Info` | standard TCTI v2 module, loaded by QNX's `libtss2-tctildr` from the name `witness:/dev/tpm0` |
 | Measurement | [tools/witness-measure.c](tools/witness-measure.c) `pcr_extend`, `measure_tree`, `measure_manifest` | runs from the IFS (`/proc/boot`), walks `/system` in sorted order (files by content, symlinks by target), raw `TPM2_PCR_Extend` through `/dev/tpm0`, event log in `/dev/shmem` |
 | Attestation agent | [agent/witnessd.c](agent/witnessd.c) `create_attestation_key`, `create_device_key`, `device_key_sign`, `answer`, `flush_stale_handles`, `main` (supervisor) | QNX TCG stack from the SDP (`libtss2-esys`, `-mu`, `-rc`, `-tctildr`); `TPM2_Quote`; device key: `Create` with a `PolicyPCR` authPolicy, `Load`, `Sign` in a policy session, `Certify` by the AK; `fork` supervisor and `alarm` watchdog |
 | Boot customisation | [image/witness-image.sh](image/witness-image.sh) | `mkqnximage` snippets: driver started in the IFS script before the system partition is mounted; measurement in `startup_postfs`; application measurement and `witnessd` in `post_start`; IFS load address for current OVMF ([image/uefi/definitions.zz_witness](image/uefi/definitions.zz_witness)) |

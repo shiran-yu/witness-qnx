@@ -2,8 +2,8 @@
 /* dev-tpm-tis: QNX 8.0 resource manager for a TPM 2.0 on the TIS/FIFO interface.
  *
  * Presents /dev/tpm0 with the same semantics as the Linux raw TPM device: write() one complete
- * TPM2 command, then read() its response. The QNX TCG stack reaches it through libtcti_witness
- * (loaded by tabrm, which provides /dev/tpmrm0 with session and object virtualisation).
+ * TPM2 command, then read() its response. The QNX TCG stack (tss2 ESYS) reaches it through our
+ * TCTI module, libtss2-tcti-witness.
  *
  * Single-threaded on purpose: the TPM executes one command at a time, and QNX message passing
  * already queues waiting clients in priority order and runs this server at the priority of the
@@ -165,7 +165,7 @@ static void usage(const char *argv0)
             "  -i irq    interrupt line (QEMU tpm-tis: 5); default: polled\n"
             "  -n path   device path (default /dev/tpm0)\n"
             "  -m mode   octal permissions (default 0600)\n"
-            "  -u/-g     owner uid/gid of the device node (e.g. the tabrm user)\n"
+            "  -u/-g     owner uid/gid of the device node\n"
             "  -f        stay in the foreground\n"
             "  -v        log every command (code, result, duration)\n",
             argv0, (unsigned long long)TIS_DEFAULT_BASE);

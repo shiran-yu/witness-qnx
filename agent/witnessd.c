@@ -21,7 +21,11 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <poll.h>
+#include <pthread.h>
+#include <sched.h>
 #include <signal.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,7 +44,10 @@
 #define QUOTE_PCR_MASK 0x0003FF /* PCR 0-9 */
 #define SEAL_PCR_MASK 0x0003B5  /* PCR 0,2,4,5,7 (firmware, boot image, disk, Secure Boot), 8 (system), 9 (apps) */
 #define DEVICE_KEY_LABEL "witness:device-key:"
-#define WATCHDOG_SECONDS 10 /* longest any one request may take */
+#define WATCHDOG_SECONDS 10 /* longest the TPM work and reply of one request may take */
+#define REQUEST_BUDGET_MS 2000 /* a client must send its request line within this */
+#define MAX_PENDING 64 /* clients being read at once */
+#define AGENT_PRIORITY 8 /* below QNX's default 10; children inherit it */
 
 static ESYS_CONTEXT *esys;
 static ESYS_TR attestation_key = ESYS_TR_NONE;
@@ -450,38 +457,93 @@ static void answer(FILE *out, const char *request)
     Esys_Free(signature);
 }
 
+static uint64_t now_ms(void)
+{
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return (uint64_t)t.tv_sec * 1000 + t.tv_nsec / 1000000;
+}
+
+/* One request line per connection, read without blocking anyone: up to MAX_PENDING clients are
+ * read in parallel, each must send its line within REQUEST_BUDGET_MS, and the oldest is dropped
+ * when the table is full. The watchdog covers only the TPM work and the reply, never a client. */
 static void serve(int port)
 {
     int listener = socket(AF_INET, SOCK_STREAM, 0);
     int yes = 1;
     struct sockaddr_in address = {.sin_family = AF_INET, .sin_port = htons(port), .sin_addr.s_addr = INADDR_ANY};
     setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes);
-    if (listener < 0 || bind(listener, (struct sockaddr *)&address, sizeof address) != 0 || listen(listener, 16) != 0) {
+    if (listener < 0 || bind(listener, (struct sockaddr *)&address, sizeof address) != 0 || listen(listener, 128) != 0) {
         fprintf(stderr, "witnessd: cannot listen on port %d: %s\n", port, strerror(errno));
         exit(EXIT_FAILURE);
     }
     fprintf(stderr, "witnessd: listening on port %d\n", port);
+    struct { int fd; size_t len; uint64_t deadline; char line[300]; } pending[MAX_PENDING];
+    size_t count = 0;
     for (;;) {
-        int client = accept(listener, NULL, NULL);
-        if (client < 0)
+        struct pollfd fds[MAX_PENDING + 1] = {{.fd = listener, .events = POLLIN}};
+        uint64_t now = now_ms(), wake = now + 60000;
+        for (size_t i = 0; i < count; i++) {
+            fds[i + 1] = (struct pollfd){.fd = pending[i].fd, .events = POLLIN};
+            wake = pending[i].deadline < wake ? pending[i].deadline : wake;
+        }
+        int nfds = (int)count + 1;
+        if (poll(fds, nfds, wake > now ? (int)(wake - now) : 0) < 0 && errno != EINTR)
             continue;
-        struct timeval timeout = {.tv_sec = 1}; /* one slow client must not stall the next */
-        setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof timeout);
-        setsockopt(client, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof timeout);
-        alarm(WATCHDOG_SECONDS); /* a request that hangs anywhere (TPM, socket) ends this agent instance */
-        /* separate streams: C forbids switching one stream from reading to writing without a seek */
-        FILE *input = fdopen(client, "r");
-        FILE *output = fdopen(dup(client), "w");
-        char request[300];
-        if (input && output && fgets(request, sizeof request, input))
-            answer(output, request);
-        if (output)
-            fclose(output);
-        if (input)
-            fclose(input);
-        else
-            close(client);
-        alarm(0);
+        now = now_ms();
+        /* clients first (indexes shift as entries are removed, so walk backwards) */
+        for (size_t i = count; i-- > 0;) {
+            int done = 0;
+            if (fds[i + 1].revents) {
+                ssize_t n = read(pending[i].fd, pending[i].line + pending[i].len, sizeof pending[i].line - 1 - pending[i].len);
+                if (n <= 0) {
+                    done = 1;
+                } else {
+                    pending[i].len += (size_t)n;
+                    pending[i].line[pending[i].len] = '\0';
+                    if (strchr(pending[i].line, '\n')) {
+                        alarm(WATCHDOG_SECONDS); /* a hang in the TPM path ends this agent instance */
+                        FILE *output = fdopen(pending[i].fd, "w");
+                        if (output) {
+                            answer(output, pending[i].line);
+                            fclose(output);
+                            pending[i].fd = -1;
+                        }
+                        alarm(0);
+                        done = 1;
+                    } else if (pending[i].len == sizeof pending[i].line - 1) {
+                        done = 1; /* no newline in a full buffer: not our protocol */
+                    }
+                }
+            } else if (now >= pending[i].deadline) {
+                done = 1;
+            }
+            if (done) {
+                if (pending[i].fd >= 0)
+                    close(pending[i].fd);
+                pending[i] = pending[--count];
+            }
+        }
+        if (fds[0].revents & POLLIN) {
+            int client = accept(listener, NULL, NULL);
+            if (client < 0)
+                continue;
+            int buffer = 256 * 1024; /* the whole reply fits: a client that never reads cannot block the write */
+            struct timeval timeout = {.tv_sec = 1};
+            setsockopt(client, SOL_SOCKET, SO_SNDBUF, &buffer, sizeof buffer);
+            setsockopt(client, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof timeout);
+            if (count == MAX_PENDING) { /* full: drop the oldest */
+                size_t oldest = 0;
+                for (size_t i = 1; i < count; i++)
+                    oldest = pending[i].deadline < pending[oldest].deadline ? i : oldest;
+                close(pending[oldest].fd);
+                pending[oldest] = pending[--count];
+            }
+            pending[count].fd = client;
+            pending[count].len = 0;
+            pending[count].line[0] = '\0';
+            pending[count++].deadline = now + REQUEST_BUDGET_MS;
+        }
     }
 }
 
@@ -567,6 +629,10 @@ int main(int argc, char **argv)
             return 2;
         }
     }
+    /* below the default 10: attestation never preempts normal-priority work, and the driver serves it at this priority */
+    struct sched_param param = {.sched_priority = AGENT_PRIORITY};
+    if (pthread_setschedparam(pthread_self(), SCHED_RR, &param) != 0)
+        fprintf(stderr, "witnessd: cannot lower priority to %d\n", AGENT_PRIORITY);
     signal(SIGPIPE, SIG_IGN);
     signal(SIGALRM, watchdog_expired);
     if (!foreground && fork() > 0)
@@ -574,12 +640,15 @@ int main(int argc, char **argv)
 
     /* Supervisor: the agent runs in a child; if the watchdog or a crash ends it, start a fresh one. */
     for (unsigned restarts = 0;; restarts++) {
+        time_t started = time(NULL);
         pid_t child = fork();
         if (child == 0)
             return run_agent(port, tcti_conf);
         int status = 0;
         if (child < 0 || waitpid(child, &status, 0) < 0)
             return EXIT_FAILURE;
+        if (time(NULL) - started > 300) /* ran healthy for 5 min: back to fast restarts */
+            restarts = 0;
         fprintf(stderr, "witnessd: agent exited (status 0x%x), restart %u\n", status, restarts + 1);
         sleep(restarts < 5 ? 1 : 10);
     }

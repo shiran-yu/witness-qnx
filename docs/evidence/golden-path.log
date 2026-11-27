@@ -1,7 +1,7 @@
 ==> cross-building Witness for QNX 8.0 x86_64
 ==> creating a UEFI QNX 8.0 image with the Witness layer
 ==> computing reference values from the build output
-wrote <repo>/.work/reference.json: boot=uefi PCR4=473775a68eb2… PCR5=25b479959033… PCR8=060a23243b1b… PCR9=fa35a77b25fe…, 241 PCR 8 + 1 PCR 9 expected events, 240 files
+wrote <repo>/.work/reference.json: boot=uefi PCR4=cb0443ce2b40… PCR5=29a5569c37ef… PCR8=9f23320b6b87… PCR9=a73ab2d338b8…, 241 PCR 8 + 1 PCR 9 expected events, 240 files
 started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
 ==> waiting for witnessd
 ---> Witness: starting TPM driver
@@ -12,6 +12,19 @@ witnessd: provisioned: device key bound to PCR 0,2,4,5,7,8,9
 witnessd: device key released (boot state matches the provisioned state)
 witnessd: listening on port 7650
 enrolled 127.0.0.1:10023: <repo>/.work/state/enrolled-127.0.0.1_10023.json
+127.0.0.1:10023  TRUSTED   device key: released (proven by TPM signature)
+  pass  attestation key              AK 59a38e285aa23b6e
+  pass  quote signature              ECDSA P-256 over TPMS_ATTEST
+  pass  freshness                    quote carries this request's nonce
+  pass  PCR values                   PCR 0-9 match the signed digest
+  pass  boot disk layout (PCR 5)     GPT partition table is the released disk image's
+  pass  firmware (PCR 0,1,2,3,6,7)   same firmware and configuration as at enrollment
+  pass  boot image (PCR 4)           IFS is the released ifs.bin (Authenticode, measured by UEFI firmware)
+  pass  event log (PCR 8)            log replays to the quoted PCR
+  pass  event log (PCR 9)            log replays to the quoted PCR
+  pass  system partition (PCR 8)     241 measurement(s) match the release
+  pass  applications (PCR 9)         1 measurement(s) match the release
+  pass  device key (PCR 0,2,4,5,7,8,9) TPM released the key bound to the released boot state; it signed our nonce
 127.0.0.1:10023  TRUSTED   device key: released (proven by TPM signature)
   pass  attestation key              AK 59a38e285aa23b6e
   pass  quote signature              ECDSA P-256 over TPMS_ATTEST
@@ -56,7 +69,7 @@ started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.lo
 (exit 2)
 ==> restoring the released files
 started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
-==> attacker plants a modified TPM library that witnessd and tabrm load
+==> attacker plants a modified TPM library that witnessd loads
 ==> rebooting
 started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
 127.0.0.1:10023  NOT TRUSTED   device key: locked (reported by agent)
@@ -94,9 +107,9 @@ started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.lo
   FAIL  applications (PCR 9)         1 difference(s) from the release
   FAIL  device key (PCR 0,2,4,5,7,8,9) TPM refused to release the device key: tpm:session(1):a policy check failed
        CHANGED  PCR 8  /system/bin/witnessd
-                  expected f8fe3eb71faa4032…  got 1f8c4208f3c97334…
+                  expected 9a3a0fbe106c047f…  got 81e2295690156ab7…
        CHANGED  PCR 9  /system/bin/witnessd
-                  expected f8fe3eb71faa4032…  got 1f8c4208f3c97334…
+                  expected 9a3a0fbe106c047f…  got 81e2295690156ab7…
 (exit 2)
 ==> restoring the released files
 started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
