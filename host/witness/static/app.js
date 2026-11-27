@@ -75,7 +75,7 @@
   // signed fleet reports: accepted recently (green) or not for 30 s and more (red)
   const reportsTag = r => {
     const stale = !r || now() - r.time > 30;
-    return `<span class="secret ${stale ? 'locked' : 'unsealed'}">${icon(stale ? 'lock' : 'unlock')} ${r ? `${esc(r.count)} accepted` : 'none accepted'}</span>${r ? ` · last ${agoTag(r.time)}` : ''}`;
+    return `<span class="secret ${stale ? 'locked' : 'unsealed'}">${icon(stale ? 'lock' : 'unlock')} ${r ? `${esc(r.count)} accepted` : 'none accepted'}</span>`;
   };
   const agoTag = t => `<time datetime="${t ? new Date(t * 1000).toISOString() : ''}" data-ago="${t || ''}">${ago(t)}</time>`;
   setInterval(() => document.querySelectorAll('[data-ago]').forEach(el => {
@@ -171,7 +171,7 @@
           <dt>Device key <span class="hint">${d.sealed_proven ? 'proven by TPM signature' : 'agent’s claim, not verified'}</span></dt><dd>${secret(d.sealed)}</dd>
           <dt>Attestation key</dt><dd class="mono">${esc(d.ak_fingerprint || '—')}</dd>
           <dt>Enrollment</dt><dd>${d.enrolled === false ? 'Not enrolled' : d.enrolled ? 'Enrolled' : '—'}</dd>
-          ${d.address ? `<dt>Signed reports <span class="hint">fleet service, device key only</span></dt><dd>${reportsTag(d.reports)}</dd>` : ''}
+          ${d.address ? `<dt>Signed reports <span class="hint">accepted by the fleet service</span></dt><dd>${reportsTag(d.reports)}</dd>` : ''}
           <dt>Last checked</dt><dd>${agoTag(d.time)}</dd>
         </dl>
         <div class="card-foot">${strip.html}<span>${!strip.count ? 'No checks yet' : `Last ${strip.count}: ${strip.failed ? `${strip.failed} failed` : 'all trusted'}`}</span></div>
@@ -286,7 +286,7 @@
       <dt>Device key</dt><dd>${secret(d.sealed)}<span class="hint">${!d.sealed_proven ? 'Reported by the agent, not proven by a signature.' : d.sealed === 'unsealed' ? 'Proven: the key signed this request, and its TPM policy binds it to this device\'s firmware (PCR 0, 2, 7) and the signed release (PCR 4, 5, 8, 9).' : 'Proven: the key signed this request, but the device booted an older signed release, not the current one.'}</span></dd>
       <dt>Attestation key</dt><dd class="mono">${esc(d.ak_fingerprint || '—')}<span class="hint">ECC P-256, derived in the TPM's endorsement hierarchy</span></dd>
       <dt>Enrollment</dt><dd>${d.enrolled ? 'Enrolled (attestation key and firmware baseline recorded)' : 'Not enrolled: run <span class="mono">witness enroll</span> on a known-good boot'}</dd>
-      ${d.address ? `<dt>Signed reports</dt><dd>${reportsTag(d.reports)}<span class="hint">The fleet service accepts this device's status reports only when its device key signed them; the TPM releases that key only in a released boot state, so a tampered device is cut off without anyone acting.${data?.reports_rejected?.count ? ` Rejected across the fleet: ${esc(data.reports_rejected.count)}, last: ${esc(data.reports_rejected.reason)}.` : ''}</span></dd>` : ''}
+      ${d.address ? `<dt>Signed reports</dt><dd>${reportsTag(d.reports)}${d.reports ? `, last ${agoTag(d.reports.time)}` : ''}<span class="hint">The fleet service accepts this device's status reports only when its device key signed them; the TPM releases that key only in a released boot state, so a tampered device is cut off without anyone acting.${data?.reports_rejected?.count ? ` Rejected across the fleet: ${esc(data.reports_rejected.count)}, last: ${esc(data.reports_rejected.reason)}.` : ''}</span></dd>` : ''}
       <dt>Evidence</dt><dd>${d.address ? `Live: witnessd at <span class="mono">${esc(d.address)}</span>, fresh nonce each time` : `Replay of <span class="mono">${esc(d.evidence)}</span> with its saved nonce`}</dd>
       ${latest?.agent_device ? `<dt>Agent reports</dt><dd>hostname <span class="mono">${esc(latest.agent_device)}</span></dd>` : ''}
       ${q ? `<dt>TPM quote</dt><dd>reset ${esc(q.reset_count)} · restart ${esc(q.restart_count)} · TPM clock ${(q.clock_ms / 1000).toFixed(1)} s<span class="hint">firmware ${esc(q.firmware_version)}</span></dd>` : ''}
