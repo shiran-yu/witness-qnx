@@ -298,7 +298,8 @@ def handler_for(fleet: Fleet):
                 device = self.device(parts)
                 if not device:
                     return self.send_json(404, {"error": "no such device"})
-                fleet.verify(device)
+                if not device.lock.locked():  # a verification already running answers this request too
+                    fleet.verify(device)
                 return self.send_json(200, fleet.detail(device))
             self.send_json(404, {"error": "not found"})
 

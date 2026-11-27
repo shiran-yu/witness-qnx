@@ -53,3 +53,20 @@ def test_device_without_any_verdict_goes_stale(reference):
     device = Device("ecu-02", "127.0.0.1:1")
     device.since -= 60
     assert Fleet(reference, [device], None, interval=1.0).summary(device)["state"] == "unreachable"
+
+
+def test_verify_requests_do_not_queue_on_a_busy_device(reference):
+    import json, urllib.request
+    from http.server import ThreadingHTTPServer
+    from witness.dashboard import handler_for
+    device = Device("ecu-01", "127.0.0.1:1")
+    fleet = Fleet(reference, [device], None, interval=1.0)
+    calls = []
+    fleet.verify = lambda d: calls.append(d)
+    server = ThreadingHTTPServer(("127.0.0.1", 0), handler_for(fleet))
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    url = f"http://127.0.0.1:{server.server_address[1]}/api/devices/ecu-01/verify"
+    with device.lock:  # a verification is in progress
+        reply = json.load(urllib.request.urlopen(urllib.request.Request(url, method="POST")))
+    server.shutdown()
+    assert reply["name"] == "ecu-01" and calls == []
