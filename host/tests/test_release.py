@@ -55,18 +55,18 @@ def _appraise(capture, reference=None, enrollment=None):
     from conftest import load
     from witness.verify import appraise
     attestation, nonce = _capture(capture)
-    return appraise(attestation, nonce, reference or load("reference-release.json"),
-                    enrollment or load("enrollment-release.json"))
+    return appraise(attestation, nonce, reference or load("release/reference.json"),
+                    enrollment or load("release/enrollment.json"))
 
 
 def test_current_signed_release_is_trusted():
-    verdict = _appraise("attestation-release.json")
+    verdict = _appraise("release/attestation-v2-current.json")
     assert verdict.trusted and verdict.sealed == "unsealed"
     assert {c.name: c.ok for c in verdict.checks}[RELEASE_KEY_CHECK]
 
 
 def test_rollback_to_an_older_signed_release_fails():
-    verdict = _appraise("attestation-release-rolled-back.json")
+    verdict = _appraise("release/attestation-v1-rolled-back.json")
     key = next(c for c in verdict.checks if c.name == RELEASE_KEY_CHECK)
     assert not verdict.trusted and not key.ok
     assert key.detail == "device booted another signed release, not the current one"
@@ -75,19 +75,19 @@ def test_rollback_to_an_older_signed_release_fails():
 
 def test_device_key_policy_chains_the_enrolled_firmware():
     from conftest import load
-    enrollment = load("enrollment-release.json")
+    enrollment = load("release/enrollment.json")
     enrollment["firmware_pcrs"]["0"] = "00" * 32
-    key = next(c for c in _appraise("attestation-release.json", enrollment=enrollment).checks
+    key = next(c for c in _appraise("release/attestation-v2-current.json", enrollment=enrollment).checks
                if c.name == RELEASE_KEY_CHECK)
     assert not key.ok and key.detail == "key is not bound to the released state"
 
 
 def test_device_key_under_another_release_key_fails():
     from conftest import load
-    reference = load("reference-release.json")
+    reference = load("release/reference.json")
     other = ec.generate_private_key(ec.SECP256R1())
     x, y = public_xy(other)
     reference["release"]["release_x"], reference["release"]["release_y"] = x.hex(), y.hex()
-    key = next(c for c in _appraise("attestation-release.json", reference=reference).checks
+    key = next(c for c in _appraise("release/attestation-v2-current.json", reference=reference).checks
                if c.name == RELEASE_KEY_CHECK)
     assert not key.ok and key.detail == "key is not bound to the released state"

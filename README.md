@@ -18,10 +18,11 @@ signature from the TPM, three questions:
 
 Each device also holds a **device key**, created inside its TPM, that the TPM lets it use only when the
 boot state (PCR 4, 5, 8 and 9: boot image, disk, system partition and `/etc`, applications) equals a
-release signed by the build host's **release key** (`TPM2_PolicyAuthorize`). The key signs every
-attestation request, and the verifier checks its TPM policy, so a tampered device loses its own
-credential and cannot fake having it. A signed update keeps it: `demo.sh update` installs release v2
-over the air and the same key is released again, with no re-provisioning. A QNX security policy confines the TPM: once the device has booted, even
+release signed by the build host's **release key** (`TPM2_PolicyAuthorize`), and the firmware
+(PCR 0, 2, 7) equals this device's own. The key signs every attestation request, and the verifier
+checks its TPM policy, so a tampered device loses its own credential and cannot fake having it. A
+signed update keeps it: `demo.sh update` installs release v2 the way an update agent would (here over
+ssh) and the same key is released again, with no re-provisioning. A QNX security policy confines the TPM: once the device has booted, even
 `root` logged in over ssh cannot open `/dev/tpm0` or take the agent's type, so it cannot extend PCRs
 or use either key. The boot script itself can (it starts those components), so Witness replaces
 the stock mount step: nothing on `/system`, in `/etc` or on the EFI partition runs before it is
@@ -107,7 +108,8 @@ demo/demo.sh verify     # challenge the device and appraise its boot
 demo/demo.sh attack     # as root on the device, try to use the TPM directly
 demo/demo.sh tamper config && demo/demo.sh verify    # attacker edits sshd_config, reboots
 demo/demo.sh restore && demo/demo.sh verify
-demo/demo.sh update && demo/demo.sh verify     # signed release v2 over the air; same device key
+demo/demo.sh update && demo/demo.sh verify     # signed release v2 installed; same device key
+demo/demo.sh rollback && demo/demo.sh verify   # signed v1 reinstalled: NOT TRUSTED, not the current release
 demo/demo.sh down
 ```
 
@@ -156,7 +158,7 @@ After `tamper config` and a reboot:
 ```
 127.0.0.1:10023  NOT TRUSTED   device key: locked (agent’s claim, not verified)
   FAIL  system and /etc (PCR 8)      1 difference(s) from the release
-  FAIL  device key (signed release, PCR 4,5,8,9) TPM refused to release the device key: tpm:parameter(1):value is out of range or is not correct for the context
+  FAIL  device key (signed release + PCR 0,2,7) TPM refused to release the device key: tpm:parameter(1):value is out of range or is not correct for the context
        CHANGED  PCR 8  /system/etc/ssh/sshd_config
                   expected 4e2e95dc5d0f3652…  got 294c7dd0399bfc3a…
 ```
@@ -167,7 +169,10 @@ agent binary replaced): `/system/bin/witnessd` changed in PCR 8 and in PCR 9. Af
 command appended to `/etc/settings/network`, which `start_net.sh` runs as root at boot):
 `CHANGED PCR 8 /data/var/etc/settings/network`, device key locked. After `update` (release v2,
 `sshd_config` with `MaxAuthTries 3`, signed on the build host and installed over ssh): TRUSTED
-against the v2 reference, and the device key is released again, the same enrolled key.
+against the v2 reference, and the device key is released again, the same enrolled key. After
+`rollback` (the v1 file and its genuine signed v1 policy reinstalled): the TPM releases the key, but
+the verifier answers `NOT TRUSTED`, `device key: released to an old release`, `FAIL device key
+(signed release + PCR 0,2,7) device booted another signed release, not the current one`.
 
 ### Fleet dashboard
 
@@ -175,6 +180,7 @@ against the v2 reference, and the device key is released again, the same enrolle
 cd host
 uv run witness dashboard -r ../.work/reference.json --state ../.work/state --device ecu-01=127.0.0.1:10023
 uv run witness dashboard --replay tests/fixtures     # no QNX or TPM needed: captured evidence, verified offline
+uv run witness dashboard --replay tests/fixtures/release   # signed release v2: current device, and one rolled back to v1
 ```
 
 Open http://127.0.0.1:8650/. Each device is re-verified every 10 s; the detail page shows the trust
@@ -210,7 +216,7 @@ credential. Witness's mount step handles the qnx6 image this demo uses, not QTD 
 | Resource manager | [driver/main.c](driver/main.c) `io_write`, `io_read`, `io_notify`, `io_read_stats`, `main` | `dispatch_create`, two `resmgr_attach` paths (`/dev/tpm0`, `/dev/tpm0-stats`), custom OCB (`IOFUNC_OCB_T`, `iofunc_mount_t` ocb calloc/free) holding each client's response, `iofunc_notify` for `select`/`poll`, `procmgr_daemon` |
 | TSS2 TCTI | [tcti/tcti-witness.c](tcti/tcti-witness.c) `Tss2_Tcti_Witness_Init`, `Tss2_Tcti_Info` | standard TCTI v2 module, loaded by QNX's `libtss2-tctildr` from the name `witness:/dev/tpm0` |
 | Measurement | [tools/witness-measure.c](tools/witness-measure.c) `pcr_extend`, `measure_tree`, `measure_manifest` | runs from the IFS (`/proc/boot`), walks `/system` in sorted order (files by content, symlinks by target), raw `TPM2_PCR_Extend` through `/dev/tpm0`, event log in `/dev/shmem` |
-| Attestation agent | [agent/witnessd.c](agent/witnessd.c) `create_attestation_key`, `create_device_key`, `device_key_sign`, `answer`, `flush_stale_handles`, `main` (supervisor) | QNX TCG stack from the SDP (`libtss2-esys`, `-mu`, `-rc`, `-tctildr`); `TPM2_Quote`; device key: `Create` with a `PolicyPCR` authPolicy, `Load`, `Sign` in a policy session, `Certify` by the AK; `fork` supervisor and `alarm` watchdog |
+| Attestation agent | [agent/witnessd.c](agent/witnessd.c) `create_attestation_key`, `create_device_key`, `device_key_sign`, `answer`, `flush_stale_handles`, `main` (supervisor) | QNX TCG stack from the SDP (`libtss2-esys`, `-mu`, `-rc`, `-tctildr`); `TPM2_Quote`; device key: `Create` with a `PolicyAuthorize` (release key) + `PolicyPCR` (PCR 0, 2, 7) authPolicy, `Load`, `Sign` in a policy session (`PolicyPCR` → `LoadExternal` + `VerifySignature` of the signed release policy → `PolicyAuthorize` → `PolicyPCR`), `Certify` by the AK; `fork` supervisor and `alarm` watchdog |
 | Boot customisation | [image/witness-image.sh](image/witness-image.sh) | `mkqnximage` snippets: driver started in the IFS script before the system partition is mounted; measurement in `startup_postfs`; application measurement and `witnessd` in `post_start`; IFS load address for current OVMF ([image/uefi/definitions.zz_witness](image/uefi/definitions.zz_witness)) |
 | Security policy | [image/witness.secpol](image/witness.secpol) | QNX secpol: every Witness process starts under its own type (`START_P(tpm_driver_t)` …); only `witness_measure_t` and `witnessd_t` may connect to the driver; the driver gets exactly `mem_phys` for its 4 KiB register page and `interrupt:5`. Built with `mkqnximage --secpol=secure --policy=…` |
 | QEMU target | [scripts/vm.sh](scripts/vm.sh) | OVMF + `tpm-tis` device + swtpm, KVM when available |
@@ -236,9 +242,10 @@ driver chose (`interrupt driven` after its interrupt self-test, or polling):
   (changed, missing, unexpected, not measured).
 - **Device key**: its signature over `"witness:device-key:" || nonce` must verify, it must be the
   enrolled key, and its `authPolicy` must equal `TPM2_PolicyAuthorize` by the release key named in
-  the reference, whose signed policy must be `TPM2_PolicyPCR` over this release's PCR 4, 5, 8, 9
-  (images without a release key: `TPM2_PolicyPCR` over the released PCR 4, 5, 8, 9 and enrolled
-  PCR 0, 2, 7), with `userWithAuth` clear, and a `TPM2_Certify` by the
+  the reference followed by `TPM2_PolicyPCR` over the enrolled PCR 0, 2, 7; the release's signed
+  policy (`TPM2_PolicyPCR` over PCR 4, 5, 8, 9) must match both the reference and the quoted PCRs,
+  so a device on an older signed release fails (images without a release key: `TPM2_PolicyPCR` over
+  the released PCR 4, 5, 8, 9 and enrolled PCR 0, 2, 7), with `userWithAuth` clear, and a `TPM2_Certify` by the
   attestation key over the same nonce must name exactly this key, so it is a key inside this TPM. A
   key re-created on a tampered boot is therefore rejected.
 - **Unenrolled devices** are NOT TRUSTED; only `witness enroll` accepts a new attestation key.
@@ -263,10 +270,9 @@ driver chose (`interrupt driven` after its interrupt self-test, or polling):
   the stock boot script reads nothing else there as code.
 - Rollback: every release the release key ever signed still unlocks the device key, so a device
   rolled back to an older signed release gets its key back; the verifier still reports it NOT
-  TRUSTED, because it checks against the current reference. Refusing old releases in the TPM itself
-  needs a monotonic NV counter in the policy, which is not implemented. The signed policy covers
-  PCR 4, 5, 8 and 9 (computable from the build); firmware PCRs are checked by the verifier against
-  the enrolled baseline, not by the key.
+  TRUSTED (`released to an old release`), because it checks against the current reference
+  (`demo.sh rollback`). Refusing old releases in the TPM itself needs a monotonic NV counter in the
+  policy, which is not implemented.
 - An update release here is the released build plus replaced files (`witness reference --replace`);
   an update that changes the boot image (PCR 4) needs the EFI partition rewritten, which the demo's
   read-only `/boot` does not allow from a root shell.
