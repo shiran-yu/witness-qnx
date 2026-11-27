@@ -83,8 +83,11 @@ must not become a new way into the device. QNX's architecture gives both, and Wi
   a root login gets neither the driver nor their types.
 - *Priority-ordered service.* A QNX server receives messages in priority order and runs at its
   client's priority. witnessd runs at priority 8, below QNX's default 10, so the TPM driver serves
-  attestation at 8 too: it never preempts normal-priority work. This is the design; we have not
-  measured control-loop latency under attestation load on real hardware (QEMU on WSL2 is too noisy).
+  attestation at 8 too: it never preempts normal-priority work. Measured under QEMU
+  ([demo/latency.sh](demo/latency.sh), [docs/evidence/latency.log](docs/evidence/latency.log)): a
+  1 kHz loop at priority 10 while the host floods witnessd (~22 attestations/s) had 0, 1 and 2
+  periods over 1 ms late in three 30 s runs, as many as idle (2, 38, 1); the same loop at priority 7,
+  below witnessd, had 8, 5 and 6108. QEMU on a laptop, not hardware timings: the rows compare.
 - *Measure before use.* The driver and the measurement tool live in the boot image, which the
   firmware measures, and run from QNX's own boot script before it reads anything on the system
   partition or in `/etc` (where `start_net.sh` sources `settings/network` as shell code). The stock

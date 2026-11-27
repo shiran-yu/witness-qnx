@@ -12,7 +12,8 @@ CC = qcc -V$(QCC_TARGET)
 CFLAGS = -O2 -g -Wall -Wextra -Werror -std=gnu11 -D_QNX_SOURCE -fstack-protector-strong -D_FORTIFY_SOURCE=2
 OUT = build/$(ARCH)
 
-BINS = $(OUT)/dev-tpm-tis $(OUT)/tpm-raw $(OUT)/libtss2-tcti-witness.so.0 $(OUT)/witness-measure $(OUT)/witnessd
+BINS = $(OUT)/dev-tpm-tis $(OUT)/tpm-raw $(OUT)/libtss2-tcti-witness.so.0 $(OUT)/witness-measure $(OUT)/witnessd \
+       $(OUT)/rt-probe
 
 all: $(BINS)
 
@@ -33,6 +34,9 @@ $(OUT)/witness-measure: tools/witness-measure.c lib/sha256.c lib/sha256.h | $(OU
 
 $(OUT)/witnessd: agent/witnessd.c | $(OUT)
 	$(CC) $(CFLAGS) -o $@ agent/witnessd.c -ltss2-esys -ltss2-mu -ltss2-rc -ltss2-tctildr -lsocket
+
+$(OUT)/rt-probe: tools/rt-probe.c | $(OUT)  # latency test only; not in the image
+	$(CC) $(CFLAGS) -o $@ tools/rt-probe.c
 
 clean:
 	rm -rf build

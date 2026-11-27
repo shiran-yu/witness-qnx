@@ -1,0 +1,45 @@
+# demo/latency.sh, three runs, QNX 8.0 on QEMU (KVM, 2 vCPUs) on WSL2, swtpm; 2026-11-27.
+# 1 kHz SCHED_FIFO loop (tools/rt-probe), 30 s per row; jitter = |period - 1 ms| in microseconds.
+# witnessd and the TPM driver serve attestation at priority 8; the loop runs above it (10) or below it (7).
+# QEMU on a laptop: idle rows already show millisecond outliers from the host. Compare rows, not absolutes.
+
+### run 1
+1 kHz loop, 30 s per run; witnessd and the TPM driver serve attestation at priority 8
+==> loop at priority 10, idle
+rt-probe: priority 10, 1000 Hz, 30000 wake-ups: jitter us p50 6 p99 164 p99.9 993 max 2371 mean 21.0; over 1 ms: 2
+==> loop at priority 10, attestation flood
+rt-probe: priority 10, 1000 Hz, 30000 wake-ups: jitter us p50 12 p99 149 p99.9 712 max 999 mean 22.7; over 1 ms: 0
+  load: 682 attestations (21.3/s) from 8 clients
+==> loop at priority 7, idle
+rt-probe: priority 7, 1000 Hz, 30000 wake-ups: jitter us p50 6 p99 139 p99.9 335 max 3448 mean 15.5; over 1 ms: 1
+==> loop at priority 7, attestation flood
+rt-probe: priority 7, 1000 Hz, 30000 wake-ups: jitter us p50 16 p99 167 p99.9 999 max 4293 mean 28.3; over 1 ms: 8
+  load: 716 attestations (22.4/s) from 8 clients
+
+### run 2
+==> loop at priority 10, idle
+rt-probe: priority 10, 1000 Hz, 30000 wake-ups: jitter us p50 6 p99 267 p99.9 1132 max 7823 mean 22.8; over 1 ms: 38
+==> loop at priority 10, attestation flood
+rt-probe: priority 10, 1000 Hz, 30000 wake-ups: jitter us p50 13 p99 144 p99.9 292 max 2696 mean 22.3; over 1 ms: 1
+  load: 688 attestations (21.5/s) from 8 clients
+==> loop at priority 7, idle
+rt-probe: priority 7, 1000 Hz, 30000 wake-ups: jitter us p50 5 p99 131 p99.9 277 max 993 mean 14.1; over 1 ms: 0
+==> loop at priority 7, attestation flood
+rt-probe: priority 7, 1000 Hz, 30000 wake-ups: jitter us p50 16 p99 161 p99.9 377 max 3154 mean 26.3; over 1 ms: 5
+  load: 715 attestations (22.3/s) from 8 clients
+
+### run 3
+==> loop at priority 10, idle
+rt-probe: priority 10, 1000 Hz, 30000 wake-ups: jitter us p50 5 p99 127 p99.9 308 max 5371 mean 14.1; over 1 ms: 1
+==> loop at priority 10, attestation flood
+rt-probe: priority 10, 1000 Hz, 30000 wake-ups: jitter us p50 13 p99 841 p99.9 995 max 1083 mean 33.2; over 1 ms: 2
+  load: 677 attestations (21.2/s) from 8 clients
+==> loop at priority 7, idle
+rt-probe: priority 7, 1000 Hz, 30000 wake-ups: jitter us p50 5 p99 127 p99.9 270 max 1395 mean 13.8; over 1 ms: 1
+==> loop at priority 7, attestation flood
+rt-probe: priority 7, 1000 Hz, 30000 wake-ups: jitter us p50 995 p99 1101 p99.9 1241 max 2605 mean 994.6; over 1 ms: 6108
+  load: 711 attestations (22.2/s) from 8 clients
+
+# periods over 1 ms late, runs 1/2/3:
+#   priority 10 (above witnessd): idle 2/38/1, flood 0/1/2
+#   priority 7  (below witnessd): idle 1/0/1, flood 8/5/6108
