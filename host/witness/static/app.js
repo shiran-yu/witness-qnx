@@ -74,7 +74,7 @@
   const clock = t => new Date(t * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   // signed fleet reports: accepted recently (green) or not for 30 s and more (red)
   const reportsTag = r => {
-    const stale = !r || Date.now() / 1000 - r.time > 30;
+    const stale = !r || now() - r.time > 30;
     return `<span class="secret ${stale ? 'locked' : 'unsealed'}">${icon(stale ? 'lock' : 'unlock')} ${r ? `${esc(r.count)} accepted` : 'none accepted'}</span>${r ? ` · last ${agoTag(r.time)}` : ''}`;
   };
   const agoTag = t => `<time datetime="${t ? new Date(t * 1000).toISOString() : ''}" data-ago="${t || ''}">${ago(t)}</time>`;

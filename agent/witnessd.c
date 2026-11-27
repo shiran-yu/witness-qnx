@@ -24,6 +24,7 @@
 #include <poll.h>
 #include <pthread.h>
 #include <sched.h>
+#include <stddef.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -837,7 +838,8 @@ static void *report_channel(void *unused)
     }
     for (;;) {
         union { struct _pulse pulse; uint16_t type; struct report_request request; } msg;
-        int rcvid = MsgReceive(attach->chid, &msg, sizeof msg, NULL);
+        struct _msg_info info;
+        int rcvid = MsgReceive(attach->chid, &msg, sizeof msg, &info);
         if (rcvid == -1)
             continue;
         if (rcvid == 0) { /* pulse: a client went away */
@@ -849,7 +851,9 @@ static void *report_channel(void *unused)
             MsgReply(rcvid, EOK, NULL, 0);
             continue;
         }
-        if (msg.type != REPORT_MSG || msg.request.size > REPORT_MAX) {
+        /* sign only bytes the sender sent: size must fit what actually arrived, never stale stack */
+        if (msg.type != REPORT_MSG || msg.request.size > REPORT_MAX ||
+            info.srcmsglen < (ssize_t)(offsetof(struct report_request, report) + msg.request.size)) {
             MsgError(rcvid, msg.type == REPORT_MSG ? EMSGSIZE : ENOSYS);
             continue;
         }

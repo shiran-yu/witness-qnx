@@ -138,14 +138,24 @@ int main(int argc, char **argv)
 {
     const char *server = "10.0.2.2:8650"; /* the host, under QEMU user networking */
     int interval = 10, once = 0, foreground = 0, opt;
-    while ((opt = getopt(argc, argv, "s:i:1f")) != -1) {
+    while ((opt = getopt(argc, argv, "s:i:1fc")) != -1) {
         switch (opt) {
         case 's': server = optarg; break;
         case 'i': interval = atoi(optarg) > 0 ? atoi(optarg) : 10; break;
         case '1': once = 1; break;
         case 'f': foreground = 1; break;
+        case 'c': { /* channel check only: may this process connect to witnessd's signing channel? */
+            int coid = name_open(REPORT_CHANNEL, 0);
+            if (coid == -1) {
+                fprintf(stderr, "witness-report: no channel to witnessd: %s\n", strerror(errno));
+                return 1;
+            }
+            name_close(coid);
+            printf("witness-report: connected to witnessd's signing channel\n");
+            return 0;
+        }
         default:
-            fprintf(stderr, "usage: witness-report [-s host:port] [-i seconds] [-1] [-f]\n");
+            fprintf(stderr, "usage: witness-report [-s host:port] [-i seconds] [-1] [-f] [-c]\n");
             return 2;
         }
     }

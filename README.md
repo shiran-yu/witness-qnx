@@ -34,7 +34,7 @@ boot state (PCR 4, 5, 8 and 9: boot image, disk, system partition and `/etc`, ap
 release signed by the build host's **release key** (`TPM2_PolicyAuthorize`), and the firmware
 (PCR 0, 2, 7) equals this device's own. The key signs every attestation request, and the verifier
 checks its TPM policy, so a tampered device loses its own credential and cannot fake having it. The
-credential does a job: the device's status reports (`witness-report`, every 10 s, bound to a one-time
+credential does a job: the device's heartbeat reports (`witness-report`: device, uptime, sequence number; every 10 s, bound to a one-time
 challenge) reach the fleet service only signed by that key, through a QNX channel that only the report
 app's security type may open, and the fleet service accepts nothing else. A tampered device is cut off
 from its fleet backend by its own TPM, with no operator action. A
@@ -179,7 +179,7 @@ tpm-raw: open /dev/tpm0: Operation not permitted
 on: Operation not permitted (/system/bin/witnessd)
 # on -T witness_measure_t /proc/boot/witness-measure -p 8 -s forged
 on: Operation not permitted (/proc/boot/witness-measure)
-# witness-report -1 -s 127.0.0.1:9                     (ask the agent's channel to sign a fleet report)
+# witness-report -c                                    (open the agent's channel that signs fleet reports)
 witness-report: no channel to witnessd: Operation not permitted
 # echo touch /tmp/pwned > /boot/onboot                 (a boot hook; it would not be run anyway)
 sh: cannot create /boot/onboot: Read-only file system

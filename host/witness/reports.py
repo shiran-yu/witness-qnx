@@ -4,9 +4,14 @@ A device app (tools/witness-report.c) fetches a one-time challenge, puts it in i
 SHA256("witness:report:" || report) with the TPM-bound device key. The TPM releases that key only in a released
 boot state on the enrolled firmware, so a tampered or rolled-back device cannot produce an accepted report.
 An unsigned report names no device anyone can trust, so it is only counted as rejected.
+Challenges are stateless (random || time || HMAC), so a flood of challenge requests evicts nothing; only
+challenges that came back in a report are remembered, until they expire.
 """
+import hashlib
+import hmac
 import json
 import os
+import struct
 import threading
 import time
 
@@ -19,54 +24,71 @@ from .tpm import parse_public
 
 REPORT_LABEL = b"witness:report:"
 CHALLENGE_TTL = 60.0  # seconds a challenge stays valid
-MAX_CHALLENGES = 4096
 MAX_REPORT = 960  # agent/witness-report.h REPORT_MAX
+# rejection categories: fixed text, never echoed from the network (shown on the dashboard)
+REASONS = {"replay": "unknown, used or expired challenge (replay)",
+           "unsigned": "unsigned: the device key was not available to sign",
+           "malformed": "malformed signature",
+           "unknown-key": "signature matches no enrolled device key"}
 
 
 class ReportDesk:
     def __init__(self, device_keys):
         """device_keys(): {device name: device key TPM2B_PUBLIC hex} for the enrolled devices."""
         self.device_keys = device_keys
+        self.secret = os.urandom(32)
         self.lock = threading.Lock()
-        self.challenges: dict[str, float] = {}
+        self.used: dict[str, float] = {}  # challenges already submitted -> issue time
         self.accepted: dict[str, dict] = {}  # device name -> {"count", "time", "report"}
         self.rejected = {"count": 0, "time": None, "reason": None}
 
+    def _mac(self, body: bytes) -> bytes:
+        return hmac.new(self.secret, body, hashlib.sha256).digest()[:16]
+
     def challenge(self) -> str:
-        nonce = os.urandom(16).hex()
-        now = time.time()
-        with self.lock:
-            if len(self.challenges) >= MAX_CHALLENGES:  # drop expired ones, then the oldest
-                self.challenges = {n: t for n, t in self.challenges.items() if now - t < CHALLENGE_TTL}
-                while len(self.challenges) >= MAX_CHALLENGES:
-                    self.challenges.pop(next(iter(self.challenges)))
-            self.challenges[nonce] = now
-        return nonce
+        body = os.urandom(8) + struct.pack(">d", time.time())
+        return (body + self._mac(body)).hex()  # 32 bytes, 64 hex characters
+
+    def _issued(self, nonce) -> float | None:
+        """Issue time of a genuine, unexpired challenge, or None."""
+        try:
+            raw = bytes.fromhex(nonce)
+        except (TypeError, ValueError):
+            return None
+        if len(raw) != 32 or not hmac.compare_digest(raw[16:], self._mac(raw[:16])):
+            return None
+        issued = struct.unpack(">d", raw[8:16])[0]
+        return issued if 0 <= time.time() - issued <= CHALLENGE_TTL else None
 
     def _reject(self, reason: str) -> tuple[int, dict]:
         with self.lock:
-            self.rejected = {"count": self.rejected["count"] + 1, "time": time.time(), "reason": reason}
-        return 403, {"accepted": False, "reason": reason}
+            self.rejected = {"count": self.rejected["count"] + 1, "time": time.time(), "reason": REASONS[reason]}
+        return 403, {"accepted": False, "reason": REASONS[reason]}
 
     def submit(self, body: dict) -> tuple[int, dict]:
         text = body.get("report") if isinstance(body, dict) else None
-        if not isinstance(text, str) or len(text.encode()) > MAX_REPORT:
-            return 400, {"accepted": False, "reason": "expected {report, r, s}"}
         try:
+            if not isinstance(text, str) or len(text.encode()) > MAX_REPORT:
+                return 400, {"accepted": False, "reason": "expected {report, r, s}"}
             report = json.loads(text)
             nonce = report["nonce"]
-        except (ValueError, KeyError, TypeError):
+        except (ValueError, KeyError, TypeError, UnicodeEncodeError):
             return 400, {"accepted": False, "reason": "report is not JSON with a nonce"}
+        issued = self._issued(nonce)
         with self.lock:
-            issued = self.challenges.pop(nonce, None) if isinstance(nonce, str) else None
-        if issued is None or time.time() - issued > CHALLENGE_TTL:
-            return self._reject("unknown, used or expired challenge (replay)")
+            now = time.time()
+            self.used = {n: t for n, t in self.used.items() if now - t <= CHALLENGE_TTL}
+            fresh = issued is not None and nonce not in self.used
+            if fresh:
+                self.used[nonce] = issued
+        if not fresh:
+            return self._reject("replay")
         if "r" not in body or "s" not in body:
-            return self._reject("unsigned: " + str(body.get("error", "no signature")))
+            return self._reject("unsigned")
         try:
             signature = encode_dss_signature(int(body["r"], 16), int(body["s"], 16))
         except (ValueError, TypeError):
-            return self._reject("malformed signature")
+            return self._reject("malformed")
         message = REPORT_LABEL + text.encode()
         for name, public in self.device_keys().items():
             try:
@@ -77,7 +99,7 @@ class ReportDesk:
                 count = self.accepted.get(name, {}).get("count", 0) + 1
                 self.accepted[name] = {"count": count, "time": time.time(), "report": report}
             return 200, {"accepted": True, "device": name}
-        return self._reject("signature matches no enrolled device key")
+        return self._reject("unknown-key")
 
     def status(self, name: str) -> dict | None:
         with self.lock:

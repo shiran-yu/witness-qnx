@@ -33,7 +33,8 @@ def test_unsigned_report_from_a_locked_device_is_rejected():
     nonce = desk.challenge()
     body = {"report": json.dumps({"nonce": nonce, "seq": 1}), "error": "device key refused by the TPM (rc 0x99d)"}
     status, result = desk.submit(body)
-    assert status == 403 and "refused by the TPM" in result["reason"]
+    assert status == 403 and result["reason"].startswith("unsigned")
+    assert "rc 0x99d" not in json.dumps(desk.rejected)  # fixed reasons only, never text from the network
     assert desk.rejected["count"] == 1
 
 
@@ -60,3 +61,25 @@ def test_attestation_signature_is_not_a_report_signature():
     text = json.dumps({"nonce": nonce})
     r, s = decode_dss_signature(keys["gateway-a"].sign(b"witness:device-key:" + text.encode(), ec.ECDSA(hashes.SHA256())))
     assert desk.submit({"report": text, "r": f"{r:x}", "s": f"{s:x}"})[0] == 403
+
+
+def test_challenge_flood_evicts_nothing():
+    desk, keys = make_desk()
+    nonce = desk.challenge()
+    for _ in range(5000):
+        desk.challenge()
+    assert desk.submit(signed(keys["gateway-a"], nonce))[0] == 200
+
+
+def test_forged_or_expired_challenge_is_rejected():
+    desk, keys = make_desk()
+    nonce = desk.challenge()
+    forged = nonce[:-2] + ("00" if nonce[-2:] != "00" else "01")
+    assert desk.submit(signed(keys["gateway-a"], forged))[0] == 403
+    other = ReportDesk(desk.device_keys)  # another server's secret
+    assert other.submit(signed(keys["gateway-a"], nonce))[0] == 403
+
+
+def test_unencodable_report_is_a_clean_400():
+    desk, _ = make_desk()
+    assert desk.submit({"report": "\ud800"})[0] == 400
