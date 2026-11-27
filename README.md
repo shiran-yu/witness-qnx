@@ -1,5 +1,7 @@
 # Witness: measured boot and remote attestation for QNX 8.0
 
+[![ci](https://github.com/shiran-yu/witness-qnx/actions/workflows/ci.yml/badge.svg)](https://github.com/shiran-yu/witness-qnx/actions/workflows/ci.yml)
+
 > **For** operators and manufacturers of QNX devices in the field (vehicle gateways, robot controllers,
 > medical and industrial devices) who must show that each device runs the software they released.
 > **Try it without QNX:** `cd host && uv run witness dashboard --replay tests/fixtures/fleet` (the fleet
@@ -159,6 +161,13 @@ boot console in [docs/evidence/qnx-console-last-boot.log](docs/evidence/qnx-cons
 signed fleet reports accepted, then rejected after a tamper, then accepted after the restore are in
 [docs/evidence/fleet-reports.log](docs/evidence/fleet-reports.log). These runs used QEMU without KVM
 (`accel: -cpu max` in the log), so boot times there are emulation times.
+
+**Checked by tools Witness did not write.** On every push, [CI](https://github.com/shiran-yu/witness-qnx/actions/workflows/ci.yml)
+runs the verifier's tests and the offline fleet replay on a clean GitHub runner, then
+[scripts/independent-check.sh](scripts/independent-check.sh) hands each captured device's quote to
+tpm2-tools from the Ubuntu archive: `tpm2_checkquote` accepts the attestation key's signature over the
+verifier's nonce, rejects a wrong nonce and a quote with one byte changed, and `tpm2_print` shows the
+signed PCR digest equal to the SHA-256 of the PCR 0-9 values the verifier judged.
 
 ```
 127.0.0.1:10023  TRUSTED   device key: released (proven by TPM signature)
