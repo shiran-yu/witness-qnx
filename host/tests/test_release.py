@@ -65,12 +65,22 @@ def test_current_signed_release_is_trusted():
     assert {c.name: c.ok for c in verdict.checks}[RELEASE_KEY_CHECK]
 
 
-def test_rollback_to_an_older_signed_release_fails():
+def test_rollback_to_an_older_signed_release_is_refused_by_the_tpm():
     verdict = _appraise("release/attestation-v1-rolled-back.json")
     key = next(c for c in verdict.checks if c.name == RELEASE_KEY_CHECK)
-    assert not verdict.trusted and not key.ok
-    assert key.detail == "device booted another signed release, not the current one"
-    assert verdict.sealed == "released to an old release" and verdict.sealed_proven
+    assert not verdict.trusted and not key.ok and verdict.sealed == "locked"
+    assert "TPM refused" in key.detail  # PolicyNV: release 2 has run, so release 1's policy fails
+
+
+def test_release_number_is_part_of_the_signed_policy(reference):
+    from witness.release import approved_policy, policy_file_text, sign_release
+    values = {i: bytes.fromhex(reference["pcr"][str(i)]) for i in RELEASE_PCRS}
+    assert len({approved_policy(values, None), approved_policy(values, 1), approved_policy(values, 2)}) == 3
+    key = ec.generate_private_key(ec.SECP256R1())
+    assert policy_file_text(sign_release(reference, key, 2)).endswith("release_number 2\n")
+    import pytest
+    with pytest.raises(ValueError):
+        sign_release(reference, key, 64)
 
 
 def test_device_key_policy_chains_the_enrolled_firmware():
@@ -93,12 +103,29 @@ def test_device_key_under_another_release_key_fails():
     assert not key.ok and key.detail == "key is not bound to the released state"
 
 
+def _other_release(reference):
+    """The same signed release key and number, but PCR 8 of another release (as if v2 were not current)."""
+    from witness.release import approved_policy
+    reference["pcr"]["8"] = "11" * 32
+    values = {i: bytes.fromhex(reference["pcr"][str(i)]) for i in RELEASE_PCRS}
+    reference["release"]["approved_policy"] = approved_policy(values, reference["release"]["release_number"]).hex()
+    return reference
+
+
+def test_older_release_without_tpm_refusal_is_named():
+    from conftest import load
+    verdict = _appraise("release/attestation-v2-current.json", reference=_other_release(load("release/reference.json")))
+    key = next(c for c in verdict.checks if c.name == RELEASE_KEY_CHECK)
+    assert key.detail == "device booted another signed release, not the current one"
+    assert verdict.sealed == "released to an old release" and verdict.sealed_proven
+
+
 def test_rollback_message_needs_a_proven_key():
     from conftest import load
     from witness.verify import appraise
-    data = load("release/attestation-v1-rolled-back.json")
+    data = load("release/attestation-v2-current.json")
     data["attestation"]["device_key"].pop("certify")
-    verdict = appraise(data["attestation"], bytes.fromhex(data["nonce"]), load("release/reference.json"),
+    verdict = appraise(data["attestation"], bytes.fromhex(data["nonce"]), _other_release(load("release/reference.json")),
                        load("release/enrollment.json"))
     key = next(c for c in verdict.checks if c.name == RELEASE_KEY_CHECK)
     assert key.detail == "key is not certified by this device's attestation key" and verdict.sealed == "locked"

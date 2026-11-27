@@ -10,7 +10,7 @@
 #   demo.sh restore    undo the tamper (or a rollback: reinstall the current release), reboot
 #   demo.sh update     signed release v2 (one hardened file), installed as an update agent would (here over ssh);
 #                      the device keeps its key
-#   demo.sh rollback   reinstall release v1 and its genuine signed policy (the verifier refuses it)
+#   demo.sh rollback   reinstall release v1 and its genuine signed policy (the TPM refuses it)
 #   demo.sh down       power off
 #   demo.sh attack     as root on the device, try to use the TPM directly (denied by the security policy)
 # Env: WORK (default src/.work), SSH_PORT (10022; attestation on SSH_PORT+1), SECPOL (secure|no)
@@ -50,6 +50,13 @@ push_release_policy() {
     "${SSH[@]}" 'mkdir -p /data/var/witness && cat > /data/var/witness/release-policy' < "$WORK/reference.json.policy"
 }
 
+# release numbers only go up: the swtpm state (and its anti-rollback NV bits) outlives rebuilds
+next_release_number() {
+    local n=$(( $(cat "$WORK/release-number" 2>/dev/null || echo 0) + 1 ))
+    [ "$n" -le 63 ] || { echo "release numbers used up (63): remove $IMAGE/tpmstate for a new TPM" >&2; exit 1; }
+    echo "$n" > "$WORK/release-number" && echo "$n"
+}
+
 reboot_device() {
     "${SSH[@]}" 'sync; shutdown -b' >/dev/null 2>&1 || true
     sleep 5
@@ -78,7 +85,7 @@ build)
     WITNESS_RELEASE_PUB="$RELEASE_KEY.pub" "$SRC/image/witness-image.sh" "$IMAGE" >/dev/null
     (cd "$IMAGE" && mkqnximage --build >"$WORK/build.log" 2>&1) || { tail "$WORK/build.log"; exit 1; }
     say "computing reference values from the build output and signing the release"
-    "${WITNESS[@]}" reference "$IMAGE" -o "$WORK/reference.json" --release-key "$RELEASE_KEY"
+    "${WITNESS[@]}" reference "$IMAGE" -o "$WORK/reference.json" --release-key "$RELEASE_KEY" --release-number "$(next_release_number)"
     ;;
 up)
     (cd "$IMAGE" && SSH_PORT=$SSH_PORT "$SRC/scripts/vm.sh" start)
@@ -148,7 +155,7 @@ update)
 sys.exit(hashlib.sha256(open(sys.argv[2],"rb").read()).hexdigest() != r)' "$WORK/reference.json" "$WORK/release-v2/sshd_config" \
         || { echo "sshd_config on the device is not the released one; restore first" >&2; exit 1; }
     echo "MaxAuthTries 3" >> "$WORK/release-v2/sshd_config"
-    "${WITNESS[@]}" reference "$IMAGE" -o "$WORK/reference-v2.json" --release-key "$RELEASE_KEY" \
+    "${WITNESS[@]}" reference "$IMAGE" -o "$WORK/reference-v2.json" --release-key "$RELEASE_KEY" --release-number "$(next_release_number)" \
         --replace /system/etc/ssh/sshd_config="$WORK/release-v2/sshd_config"
     cp "$WORK/reference.json" "$WORK/reference-v1.json" && cp "$WORK/reference.json.policy" "$WORK/reference-v1.json.policy"
     cp "$WORK/reference-v2.json" "$WORK/reference.json" && cp "$WORK/reference-v2.json.policy" "$WORK/reference.json.policy"
@@ -159,7 +166,7 @@ sys.exit(hashlib.sha256(open(sys.argv[2],"rb").read()).hexdigest() != r)' "$WORK
     reboot_device
     ;;
 rollback)
-    # v1 was signed too, so the TPM releases the key; the verifier refuses it because v2 is current
+    # v1 is genuinely signed, but v2 has run: the TPM's anti-rollback NV bits refuse v1's policy
     [ -f "$WORK/reference-v1.json" ] || { echo "rollback needs demo.sh update first" >&2; exit 1; }
     say "attacker reinstalls release v1 (the old sshd_config) and its genuine signed policy"
     "${SSH[@]}" 'cat > /system/etc/ssh/.sshd_config.new && mv /system/etc/ssh/.sshd_config.new /system/etc/ssh/sshd_config' \

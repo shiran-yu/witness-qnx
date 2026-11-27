@@ -78,6 +78,8 @@ def main(argv=None) -> int:
                            help="update release: the build with this file replaced (repeatable)")
     reference.add_argument("--release-key", metavar="PEM",
                            help="sign this release's PCR policy (writes <output>.policy for the device)")
+    reference.add_argument("--release-number", type=int, metavar="N",
+                           help="anti-rollback: once release N ran, the TPM refuses releases below N (1-63)")
 
     release_key = commands.add_parser("release-key", help="create the release signing key (keep it off devices)")
     release_key.add_argument("path")
@@ -127,11 +129,16 @@ def main(argv=None) -> int:
         result = build_reference(args.image_dir, dict(item.split("=", 1) for item in args.replace))
         if args.release_key:
             from .release import load_release_key, policy_file_text, sign_release
-            policy = sign_release(result, load_release_key(args.release_key))
-            result["release"] = {k: policy[k] for k in ("pcr_mask", "approved_policy", "release_x", "release_y")}
+            try:
+                policy = sign_release(result, load_release_key(args.release_key), args.release_number)
+            except ValueError as error:
+                parser.error(str(error))
+            result["release"] = {k: policy[k] for k in ("pcr_mask", "approved_policy", "release_x", "release_y",
+                                                        "release_number") if k in policy}
             with open(args.output + ".policy", "w") as out:
                 out.write(policy_file_text(policy))
-            print(f"wrote {args.output}.policy: release PCR policy signed for PCR 4,5,8,9")
+            print(f"wrote {args.output}.policy: release PCR policy signed for PCR 4,5,8,9"
+                  + (f", release {args.release_number} (older releases refused by the TPM)" if args.release_number else ""))
         with open(args.output, "w") as out:
             json.dump(result, out, indent=1)
         print(f"wrote {args.output}: boot={result['boot_mode']} "

@@ -1,9 +1,9 @@
 {
  "version": 2,
- "created": "2026-11-27T06:30:19+00:00",
+ "created": "2026-11-27T07:33:58+00:00",
  "image": "vm",
  "boot_mode": "uefi",
- "ifs_sha256": "148d033dbef4c5a23d5c31fda8ef54447857768bd5acab9624d24a9e70ae1852",
+ "ifs_sha256": "c6887843307efc348f2a7f7aa81631e1b470d72685f531b74c3d82eefc879eea",
  "events": {
   "8": [
    {
@@ -854,7 +854,7 @@
    {
     "type": "file",
     "path": "/system/bin/witnessd",
-    "sha256": "978ab6bb41cec44168c7809b8f714e6de23816ee760107a5899b5bb8dab02508"
+    "sha256": "ba840b3cf0bf56b4ced9d5fbad824314ff553f76a26e52b6aef42a0b81dce4fe"
    },
    {
     "type": "file",
@@ -879,7 +879,7 @@
    {
     "type": "file",
     "path": "/system/etc/build.date",
-    "sha256": "eca936669a28c44285a02e9c4a338130af9827eb64b32374b2cb64549680c945"
+    "sha256": "08ad1183e5f3cf5c4dc8154413c9ffbb6a298233e6b80b985f9e99ccfa4ee44b"
    },
    {
     "type": "file",
@@ -1209,7 +1209,7 @@
    {
     "type": "file",
     "path": "/data/var/etc/build.date",
-    "sha256": "eca936669a28c44285a02e9c4a338130af9827eb64b32374b2cb64549680c945"
+    "sha256": "08ad1183e5f3cf5c4dc8154413c9ffbb6a298233e6b80b985f9e99ccfa4ee44b"
    },
    {
     "type": "file",
@@ -1276,18 +1276,18 @@
    {
     "type": "file",
     "path": "/system/bin/witnessd",
-    "sha256": "978ab6bb41cec44168c7809b8f714e6de23816ee760107a5899b5bb8dab02508"
+    "sha256": "ba840b3cf0bf56b4ced9d5fbad824314ff553f76a26e52b6aef42a0b81dce4fe"
    }
   ]
  },
  "pcr": {
-  "8": "36b67b2b9eeb57d82b4959f604a1d43fcae1522a523f41e34051ce83d2a62b10",
-  "9": "747b3353f22bc92c70d3a5b36fd18f5ac6df468af4653f3ad38faa368941af67",
-  "4": "4e39561903bdf6fa89d08ab83ad96a8661d374055e858db8dd699b0de5617e0a",
-  "5": "a38dbffc57df2a768f6d9e0dde83507b1ae8a2e65e686e215db7ee5fb0153ab6"
+  "8": "d5cbd938e07d87df008ee0e2b5381922c9f0c8b9c91850d9c73eaf4d9c410ed1",
+  "9": "ec4f469be10e6304e1e5bb2851183dace1c9bd50ce4f156263b7a5433afc8171",
+  "4": "08aaa1231fd64f25bf57676e9f3e4b5eaaeb604b34f6a2311809587c81d8b5d3",
+  "5": "f794507c1c0c6812b5b98590fbbb275865380b6f449b023d66076d878cf8bc11"
  },
  "files": {
-  "/system/etc/build.date": "eca936669a28c44285a02e9c4a338130af9827eb64b32374b2cb64549680c945",
+  "/system/etc/build.date": "08ad1183e5f3cf5c4dc8154413c9ffbb6a298233e6b80b985f9e99ccfa4ee44b",
   "/system/etc/profile": "61f2a9b1d5a4a75dcf262baaa69a4c8e747bd23827e138882d82682411068662",
   "/system/bin/start_net.sh": "abe38f049ea2bd08193ea3d25f40238ffa4852b917e76bedb2764aa430c516cc",
   "/system/etc/startup/post_startup.sh": "abdec35190cb51c3250eeee4aaeff236c9d05f3476d734dc6499711d0e302527",
@@ -1435,7 +1435,7 @@
   "/system/lib/libtss2_helper.so.1": "e71146d96349f6104950cd497f7d363bf7abcceb38a92ab4d7d59bc0521a3cb0",
   "/system/lib/libtss2-tcti-witness.so.0": "12773f1ceb45127562fee2f4f98abad87b8d115569b3df3b5bbb73bd1a541705",
   "/system/bin/tpm-raw": "efe0c50b456f6ad93f0bd077450694a87b50a5946ffe6c2e45c0200e3e974d6b",
-  "/system/bin/witnessd": "978ab6bb41cec44168c7809b8f714e6de23816ee760107a5899b5bb8dab02508",
+  "/system/bin/witnessd": "ba840b3cf0bf56b4ced9d5fbad824314ff553f76a26e52b6aef42a0b81dce4fe",
   "/system/bin/ascii": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
   "/system/bin/base64": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
   "/system/bin/basename": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
@@ -1529,7 +1529,7 @@
   "/system/bin/zcat": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
   "/data/var/etc/resolv.conf": "83ec642cfe4e6b0a3af6c2cdf73059efa82942f8721bc4ef78880391e7799e98",
   "/data/var/etc/profile": "f2a14885f8f94772c9339ca53f6ecb3742f2a36d2275fbd1b8f35892cd102653",
-  "/data/var/etc/build.date": "eca936669a28c44285a02e9c4a338130af9827eb64b32374b2cb64549680c945",
+  "/data/var/etc/build.date": "08ad1183e5f3cf5c4dc8154413c9ffbb6a298233e6b80b985f9e99ccfa4ee44b",
   "/data/var/etc/passwd": "ed7ede1ed9261c7960d9d9f5ea2ea42c4b2f8a3881a5f263e433d6c88acc3541",
   "/data/var/etc/shadow": "ad104356ca871e4a47de5fa8a22fb951bebfa5979de0f2a3757273d0de5ec82a",
   "/data/var/etc/group": "f9bdd5a011cc8b3f5b1741e80b7784ce5666caaeb70639a5adbedf632f4bc507",
@@ -1543,12 +1543,13 @@
  "replaced": [
   "/system/etc/ssh/sshd_config"
  ],
- "ifs_authenticode": "6d91b0b693b7f947b0905a5241badcf55ea76dcea07e25f98dd699d85baf2559",
- "gpt_event": "3296d24e56bb1c7349acf934a26292a38415fa398c45e6357666545e6001250d",
+ "ifs_authenticode": "d2f0f253bc003645c8caa1042e358813fb49bfc1585b765c8f2076d19b9bfde7",
+ "gpt_event": "6744a4ddd515c7da308345cc49bec02d35a7beea55c5d19523b4e310e4e1f12d",
  "release": {
   "pcr_mask": 816,
-  "approved_policy": "08566875957bddde5f0a949397b8c3097153f8557e74f279866328ee72c9146a",
+  "approved_policy": "b4c93ab68b8320836dd712b63ef755c5231f88b7a389021fd9ae8479d11c78eb",
   "release_x": "5c4c9c7f6a8437782f8f8454126bf22e031d9ae2de21b24bf8822d6bb35ec283",
-  "release_y": "ba6c92f3ddebfe37409b5a2f059607037154093054c8fc69ae7e4eab6f3361c2"
+  "release_y": "ba6c92f3ddebfe37409b5a2f059607037154093054c8fc69ae7e4eab6f3361c2",
+  "release_number": 2
  }
 }

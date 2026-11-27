@@ -7,10 +7,24 @@ import os
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, utils
 
-from .tpm import ecc_public_area, object_name, pcr_policy_digest, policy_authorize_digest
+from .tpm import (TPM_EO_BITCLEAR, ecc_public_area, nv_name, object_name, pcr_policy_digest, policy_authorize_digest,
+                  policy_nv_digest)
 
 RELEASE_PCRS = (4, 5, 8, 9)  # predicted from the build: signed per release
 FIRMWARE_KEY_PCRS = (0, 2, 7)  # bound per device after PolicyAuthorize (witnessd FIRMWARE_PCR_MASK)
+# anti-rollback NV bit field, as witnessd defines it (RELEASE_NV_INDEX, RELEASE_NV_ATTRIBUTES + TPMA_NV_WRITTEN)
+RELEASE_NV_INDEX = 0x01005700
+RELEASE_NV_NAME = nv_name(RELEASE_NV_INDEX, 0x22040024, 8)  # AUTHWRITE, NT_BITS, AUTHREAD, NO_DA, WRITTEN
+MAX_RELEASE_NUMBER = 63
+
+
+def approved_policy(values: dict[int, bytes], number: int | None) -> bytes:
+    """What a release signs: PolicyPCR over its PCRs, then (anti-rollback) PolicyNV: no bit number..63 is set."""
+    digest = pcr_policy_digest(values)
+    if number:
+        newer = (~((1 << number) - 1)) & (2 ** 64 - 1)
+        digest = policy_nv_digest(digest, RELEASE_NV_NAME, newer.to_bytes(8, "big"), 0, TPM_EO_BITCLEAR)
+    return digest
 
 
 def make_release_key(path: str) -> None:
@@ -33,23 +47,25 @@ def release_key_name(x: bytes, y: bytes) -> bytes:
     return object_name(ecc_public_area(x, y))
 
 
-def sign_release(reference: dict, key: ec.EllipticCurvePrivateKey) -> dict:
-    """The signed PCR policy of one release: what witnessd needs for TPM2_PolicyAuthorize."""
+def sign_release(reference: dict, key: ec.EllipticCurvePrivateKey, number: int | None = None) -> dict:
+    """The signed policy of one release: what witnessd needs for TPM2_PolicyAuthorize."""
+    if number is not None and not 1 <= number <= MAX_RELEASE_NUMBER:
+        raise ValueError(f"release number must be 1-{MAX_RELEASE_NUMBER}")
     values = {i: bytes.fromhex(reference["pcr"][str(i)]) for i in RELEASE_PCRS}
-    approved = pcr_policy_digest(values)
+    approved = approved_policy(values, number)
     a_hash = hashlib.sha256(approved).digest()  # aHash = H(approvedPolicy || policyRef), policyRef empty
     r, s = utils.decode_dss_signature(key.sign(a_hash, ec.ECDSA(utils.Prehashed(hashes.SHA256()))))
     x, y = public_xy(key)
     return {"pcr_mask": sum(1 << i for i in RELEASE_PCRS), "approved_policy": approved.hex(),
             "signature_r": r.to_bytes(32, "big").hex(), "signature_s": s.to_bytes(32, "big").hex(),
             "release_x": x.hex(), "release_y": y.hex(), "image": reference.get("image"),
-            "ifs_sha256": reference.get("ifs_sha256")}
+            "ifs_sha256": reference.get("ifs_sha256"), **({"release_number": number} if number else {})}
 
 
 def policy_file_text(policy: dict) -> str:
     """The line format witnessd reads: one `key value` per line, values in hex."""
-    keys = ("pcr_mask", "approved_policy", "signature_r", "signature_s", "release_x", "release_y")
-    return "".join(f"{k} {policy[k]:x}\n" if k == "pcr_mask" else f"{k} {policy[k]}\n" for k in keys)
+    keys = ("pcr_mask", "approved_policy", "signature_r", "signature_s", "release_x", "release_y", "release_number")
+    return "".join(f"{k} {policy[k]:x}\n" if k == "pcr_mask" else f"{k} {policy[k]}\n" for k in keys if k in policy)
 
 
 def device_key_policy(x: bytes, y: bytes) -> bytes:

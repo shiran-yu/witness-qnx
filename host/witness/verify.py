@@ -188,14 +188,15 @@ def _check_device_key(verdict: Verdict, attestation: dict, nonce: bytes, referen
     released = {i: bytes.fromhex(reference["pcr"][str(i)] if str(i) in reference["pcr"] else firmware[str(i)])
                 for i in DEVICE_KEY_PCRS}
     if release:  # PolicyAuthorize(release key) then PolicyPCR over this device's enrolled firmware PCR 0, 2, 7
-        from .release import FIRMWARE_KEY_PCRS, RELEASE_PCRS, device_key_policy
+        from .release import FIRMWARE_KEY_PCRS, RELEASE_PCRS, approved_policy, device_key_policy
         policy = pcr_policy_digest({i: bytes.fromhex(firmware[str(i)]) for i in FIRMWARE_KEY_PCRS},
                                    device_key_policy(bytes.fromhex(release["release_x"]), bytes.fromhex(release["release_y"])))
         # the key works under any signed release: the one this device booted must be the current one
         approved = release["approved_policy"]
-        reference_consistent = approved == pcr_policy_digest(
-            {i: bytes.fromhex(reference["pcr"][str(i)]) for i in RELEASE_PCRS}).hex()
-        signed_for_this_release = approved == pcr_policy_digest({i: pcrs[i] for i in RELEASE_PCRS}).hex()
+        number = release.get("release_number")  # anti-rollback PolicyNV after PolicyPCR
+        reference_consistent = approved == approved_policy(
+            {i: bytes.fromhex(reference["pcr"][str(i)]) for i in RELEASE_PCRS}, number).hex()
+        signed_for_this_release = approved == approved_policy({i: pcrs[i] for i in RELEASE_PCRS}, number).hex()
     else:
         policy, reference_consistent, signed_for_this_release = pcr_policy_digest(released), True, True
     bound = key.auth_policy == policy and key.attributes & TPMA_OBJECT_FIXEDTPM \

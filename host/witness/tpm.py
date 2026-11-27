@@ -138,6 +138,22 @@ def pcr_policy_digest(values: dict[int, bytes], previous: bytes = bytes(32)) -> 
     return hashlib.sha256(previous + struct.pack(">I", TPM_CC_POLICY_PCR) + selection + pcr_digest).digest()
 
 
+TPM_CC_POLICY_NV = 0x149
+TPM_EO_BITCLEAR = 0x000B
+
+
+def nv_name(index: int, attributes: int, size: int) -> bytes:
+    """Name of an NV index: nameAlg || H(TPMS_NV_PUBLIC), empty authPolicy."""
+    public = struct.pack(">IHIHH", index, TPM_ALG_SHA256, attributes, 0, size)
+    return struct.pack(">H", TPM_ALG_SHA256) + hashlib.sha256(public).digest()
+
+
+def policy_nv_digest(previous: bytes, name: bytes, operand: bytes, offset: int, operation: int) -> bytes:
+    """Policy digest after TPM2_PolicyNV."""
+    args = hashlib.sha256(operand + struct.pack(">HH", offset, operation)).digest()
+    return hashlib.sha256(previous + struct.pack(">I", TPM_CC_POLICY_NV) + args + name).digest()
+
+
 @dataclass
 class Quote:
     raw: bytes

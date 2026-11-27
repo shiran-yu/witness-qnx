@@ -158,9 +158,14 @@ static int write_blob(const char *path, const uint8_t *data, size_t size)
  * PolicyPCR over its PCRs, then PolicyAuthorize with the signature checked by the TPM. */
 #define RELEASE_PUB "/proc/boot/witness-release.pub"
 #define RELEASE_POLICY "release-policy" /* in state_dir; signed, so it needs no measurement */
+/* Anti-rollback: an NV bit field (bits can be set, never cleared). Release N's signed policy holds
+ * PolicyNV(BITCLEAR, bits N..63), and once the TPM has accepted release N witnessd sets bits 0..N-1,
+ * so every older release's policy fails in the TPM. Must match host/witness/release.py. */
+#define RELEASE_NV_INDEX 0x01005700
+#define RELEASE_NV_ATTRIBUTES (TPMA_NV_AUTHWRITE | TPMA_NV_AUTHREAD | TPMA_NV_NO_DA | (TPM2_NT_BITS << TPMA_NV_TPM2_NT_SHIFT))
 
 struct release {
-    uint32_t pcr_mask;
+    uint32_t pcr_mask, number; /* number 0: a release without anti-rollback */
     uint8_t approved[32], r[32], s[32], x[32], y[32];
     int have_key, have_policy;
 };
@@ -197,11 +202,13 @@ static void read_release_file(const char *path, struct release *release)
             seen |= 16;
         else if (!strcmp(key, "release_y") && !parse_hex(value, release->y, 32))
             seen |= 32;
+        else if (!strcmp(key, "release_number") && sscanf(value, "%u", &release->number) != 1)
+            release->number = 100; /* malformed: out of range below */
     }
     if (file)
         fclose(file);
     release->have_key = (seen & 48) == 48;
-    release->have_policy = (seen & 63) == 63 && (release->pcr_mask & ~SEAL_PCR_MASK) == 0;
+    release->have_policy = (seen & 63) == 63 && (release->pcr_mask & ~SEAL_PCR_MASK) == 0 && release->number <= 63;
 }
 
 static struct release read_release(void)
@@ -249,6 +256,65 @@ static TSS2_RC policy_pcr(ESYS_TR session, uint32_t mask)
     TPML_PCR_SELECTION selection;
     selection_from_mask(&selection, mask);
     return Esys_PolicyPCR(esys, session, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, &current_values, &selection);
+}
+
+/* The anti-rollback NV index; defined (all bits clear) on first use. Close the handle with Esys_TR_Close. */
+static TSS2_RC release_counter(ESYS_TR *nv)
+{
+    if (Esys_TR_FromTPMPublic(esys, RELEASE_NV_INDEX, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, nv) == TSS2_RC_SUCCESS)
+        return TSS2_RC_SUCCESS;
+    TPM2B_AUTH auth = {0};
+    TPM2B_NV_PUBLIC public = {
+        .nvPublic = {.nvIndex = RELEASE_NV_INDEX, .nameAlg = TPM2_ALG_SHA256, .attributes = RELEASE_NV_ATTRIBUTES,
+                     .dataSize = 8},
+    };
+    TSS2_RC rc = Esys_NV_DefineSpace(esys, ESYS_TR_RH_OWNER, ESYS_TR_PASSWORD, ESYS_TR_NONE, ESYS_TR_NONE, &auth,
+                                     &public, nv);
+    if (rc == TSS2_RC_SUCCESS) /* first write: the index exists with no bit set (release 1 and later pass) */
+        rc = Esys_NV_SetBits(esys, *nv, *nv, ESYS_TR_PASSWORD, ESYS_TR_NONE, ESYS_TR_NONE, 0);
+    if (rc == TSS2_RC_SUCCESS)
+        fprintf(stderr, "witnessd: anti-rollback NV index 0x%x defined\n", RELEASE_NV_INDEX);
+    return rc;
+}
+
+/* PolicyNV: no bit N..63 is set, i.e. no release newer than N has run on this TPM */
+static TSS2_RC policy_release_number(ESYS_TR session, uint32_t number)
+{
+    ESYS_TR nv;
+    TSS2_RC rc = release_counter(&nv);
+    if (rc != TSS2_RC_SUCCESS)
+        return rc;
+    uint64_t newer = ~((UINT64_C(1) << number) - 1);
+    TPM2B_OPERAND operand = {.size = 8};
+    for (int i = 0; i < 8; i++)
+        operand.buffer[i] = (uint8_t)(newer >> (56 - 8 * i));
+    rc = Esys_PolicyNV(esys, nv, nv, session, ESYS_TR_PASSWORD, ESYS_TR_NONE, ESYS_TR_NONE, &operand, 0,
+                       TPM2_EO_BITCLEAR);
+    Esys_TR_Close(esys, &nv);
+    return rc;
+}
+
+/* After the TPM accepted release N: set bits 0..N-1, so releases older than N fail from now on. */
+static void record_release_number(uint32_t number)
+{
+    ESYS_TR nv;
+    TPM2B_MAX_NV_BUFFER *data = NULL;
+    uint64_t bits = (UINT64_C(1) << number) - 1, current = 0;
+    if (!number || release_counter(&nv) != TSS2_RC_SUCCESS)
+        return;
+    if (Esys_NV_Read(esys, nv, nv, ESYS_TR_PASSWORD, ESYS_TR_NONE, ESYS_TR_NONE, 8, 0, &data) == TSS2_RC_SUCCESS &&
+        data->size == 8)
+        for (int i = 0; i < 8; i++)
+            current = current << 8 | data->buffer[i];
+    Esys_Free(data);
+    if ((current & bits) != bits) { /* write only when it changes (NV wear) */
+        TSS2_RC rc = Esys_NV_SetBits(esys, nv, nv, ESYS_TR_PASSWORD, ESYS_TR_NONE, ESYS_TR_NONE, bits);
+        if (rc != TSS2_RC_SUCCESS)
+            fail("record release number", rc);
+        else
+            fprintf(stderr, "witnessd: release %u recorded: older releases can no longer use the device key\n", number);
+    }
+    Esys_TR_Close(esys, &nv);
 }
 
 /* In a policy session already past PolicyPCR: have the TPM check the release signature, then PolicyAuthorize. */
@@ -400,7 +466,10 @@ static TSS2_RC device_key_sign(const uint8_t *data, size_t size, TPMT_SIGNATURE 
     }
     rc = pcr_policy_session(TPM2_SE_POLICY, release.have_key ? release.pcr_mask : SEAL_PCR_MASK, &session);
     if (rc == TSS2_RC_SUCCESS && release.have_key) {
-        rc = authorize_release(session, &release);
+        if (release.number) /* the signed policy is PolicyPCR then PolicyNV */
+            rc = policy_release_number(session, release.number);
+        if (rc == TSS2_RC_SUCCESS)
+            rc = authorize_release(session, &release);
         if (rc == TSS2_RC_SUCCESS) /* then this device's enrolled firmware state */
             rc = policy_pcr(session, FIRMWARE_PCR_MASK);
         if (rc != TSS2_RC_SUCCESS)
@@ -411,6 +480,8 @@ static TSS2_RC device_key_sign(const uint8_t *data, size_t size, TPMT_SIGNATURE 
         rc = Esys_Sign(esys, device_key, session, ESYS_TR_NONE, ESYS_TR_NONE, digest, &scheme, ticket, signature);
         Esys_FlushContext(esys, session);
     }
+    if (rc == TSS2_RC_SUCCESS && release.have_key) /* the TPM checked this release's signature: record it */
+        record_release_number(release.number);
     Esys_Free(digest);
     Esys_Free(ticket);
     return rc;
