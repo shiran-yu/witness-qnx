@@ -192,6 +192,19 @@ Open http://127.0.0.1:8650/. Each device is re-verified every 10 s; the detail p
 chain in boot order (firmware, boot image, disk, system partition, applications), the file that
 changed with expected and measured digests, the replayed event log and PCR 0-9.
 
+A three-device fleet, each QEMU VM with its own swtpm (its own attestation key, device key and
+anti-rollback bits), after `demo.sh build up enroll update`:
+
+```bash
+demo/fleet.sh up          # gateway-b, gateway-c: copies of gateway-a's disk with new TPMs, enrolled; then
+                          # gateway-b rolls back to v1, gateway-c gets a modified TPM library
+demo/fleet.sh dashboard   # gateway-a TRUSTED; gateway-b "sshd_config rolled back to release 5", key
+                          # refused by its TPM; gateway-c "libtss2-rc.so.1 changed", key locked
+```
+
+A file that equals an older release's version is named as a rollback: `witness reference --previous`
+records the files that differ from the previous release, and `demo.sh update` passes it.
+
 ## Evidence of QNX use
 
 All target code is C11 built with `qcc -Vgcc_ntox86_64` for QNX 8.0 ([Makefile](Makefile), `-Werror`,

@@ -60,6 +60,8 @@ def describe(finding: dict) -> dict:
     place = PCR_PLACE.get(pcr, "firmware")
     if kind == "firmware":
         title = f"Firmware measurement PCR {pcr} differs from enrollment"
+    elif finding.get("older_release"):
+        title = f"{what} rolled back to release {finding['older_release']}"
     else:
         title = f"{what} {KIND_TEXT.get(kind, kind)}"
     return dict(finding, title=title, place=f"{place} (PCR {pcr})")

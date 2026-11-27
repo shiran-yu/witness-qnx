@@ -13,12 +13,12 @@
 #   demo.sh rollback   reinstall release v1 and its genuine signed policy (the TPM refuses it)
 #   demo.sh down       power off
 #   demo.sh attack     as root on the device, try to use the TPM directly (denied by the security policy)
-# Env: WORK (default src/.work), SSH_PORT (10022; attestation on SSH_PORT+1), SECPOL (secure|no)
+# Env: WORK (default src/.work), IMAGE ($WORK/vm), SSH_PORT (10022; attestation on SSH_PORT+1), SECPOL (secure|no)
 set -euo pipefail
 
 SRC=$(cd "$(dirname "$0")/.." && pwd)
 WORK=${WORK:-$SRC/.work}
-IMAGE=$WORK/vm
+IMAGE=${IMAGE:-$WORK/vm}  # another device: a copy of the image dir with its own tpmstate (demo/fleet.sh)
 SSH_PORT=${SSH_PORT:-10022}
 SECPOL=${SECPOL:-secure}  # secure: QNX security policy image/witness.secpol; no: unconfined (applies when the image is created)
 DEVICE=127.0.0.1:$((SSH_PORT + 1))
@@ -159,7 +159,7 @@ sys.exit(hashlib.sha256(open(sys.argv[2],"rb").read()).hexdigest() != r)' "$WORK
     echo "MaxAuthTries 3" >> "$WORK/release-v2/sshd_config"
     next_release_number
     "${WITNESS[@]}" reference "$IMAGE" -o "$WORK/reference-v2.json" --release-key "$RELEASE_KEY" --release-number "$RELEASE_NUMBER" \
-        --replace /system/etc/ssh/sshd_config="$WORK/release-v2/sshd_config"
+        --previous "$WORK/reference.json" --replace /system/etc/ssh/sshd_config="$WORK/release-v2/sshd_config"
     cp "$WORK/reference.json" "$WORK/reference-v1.json" && cp "$WORK/reference.json.policy" "$WORK/reference-v1.json.policy"
     cp "$WORK/reference-v2.json" "$WORK/reference.json" && cp "$WORK/reference-v2.json.policy" "$WORK/reference.json.policy"
     say "device: the update agent installs the file and the signed v2 policy, then reboots"

@@ -140,3 +140,16 @@ def test_policy_nv_digest_matches_what_the_tpm_accepted():
     values = {i: bytes.fromhex(reference["pcr"][str(i)]) for i in RELEASE_PCRS}
     assert approved_policy(values, reference["release"]["release_number"]).hex() == \
         reference["release"]["approved_policy"]
+
+
+def test_rollback_names_the_older_release():
+    from conftest import load
+    from witness.dashboard import describe
+    reference = load("release/reference.json")
+    sshd = "/system/etc/ssh/sshd_config"
+    old = next(f["actual"] for f in _appraise("release/attestation-v1-rolled-back.json").findings if f["what"] == sshd)
+    reference["previous_releases"] = [{"release_number": 3, "files": {sshd: old}}]
+    verdict = _appraise("release/attestation-v1-rolled-back.json", reference=reference)
+    finding = next(f for f in verdict.findings if f["what"] == sshd)
+    assert finding["older_release"] == 3
+    assert describe(finding)["title"] == f"{sshd} rolled back to release 3"

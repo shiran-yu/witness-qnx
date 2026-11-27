@@ -64,6 +64,8 @@ def print_verdict(verdict, device: str) -> None:
         line = f"  {RED}{finding['kind'].upper():>12}{RESET}  PCR {finding['pcr']}  {safe(finding['what'])}"
         if "expected" in finding:
             line += f"\n{'':18}expected {finding['expected'][:16]}…  got {safe(finding['actual'])[:16]}…"
+        if finding.get("older_release"):
+            line += f"  = release {finding['older_release']}'s version (rollback)"
         print(line)
 
 
@@ -80,6 +82,8 @@ def main(argv=None) -> int:
                            help="sign this release's PCR policy (writes <output>.policy for the device)")
     reference.add_argument("--release-number", type=int, metavar="N",
                            help="required with --release-key: once release N ran, the TPM refuses releases below N (1-63)")
+    reference.add_argument("--previous", metavar="REFERENCE",
+                           help="the previous release's reference: a device back on its files is reported as a rollback")
 
     release_key = commands.add_parser("release-key", help="create the release signing key (keep it off devices)")
     release_key.add_argument("path")
@@ -127,6 +131,12 @@ def main(argv=None) -> int:
         return 0
     if args.command == "reference":
         result = build_reference(args.image_dir, dict(item.split("=", 1) for item in args.replace))
+        if args.previous:  # files that differ from the previous release, so the verifier can name a rollback
+            previous = json.load(open(args.previous))
+            changed = {p: d for p, d in previous["files"].items() if result["files"].get(p) not in (None, d)}
+            number = previous.get("release", {}).get("release_number")
+            result["previous_releases"] = [{"release_number": number, "files": changed}] + \
+                previous.get("previous_releases", [])
         if args.release_key and args.release_number is None:
             parser.error("--release-key needs --release-number: an unnumbered release could be rolled back to")
         if args.release_key:

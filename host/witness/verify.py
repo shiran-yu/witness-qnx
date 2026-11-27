@@ -151,8 +151,13 @@ def _appraise(attestation: dict, nonce: bytes, reference: dict, enrollment: dict
                                          "actual": event["sha256"]})
             elif want["sha256"] != event["sha256"]:
                 kind = "missing" if event["type"] == "missing" else "changed"
-                verdict.findings.append({"pcr": pcr, "kind": kind, "what": event["path"],
-                                         "expected": want["sha256"], "actual": event["sha256"]})
+                finding = {"pcr": pcr, "kind": kind, "what": event["path"],
+                           "expected": want["sha256"], "actual": event["sha256"]}
+                older = [p["release_number"] for p in reference.get("previous_releases", [])
+                         if p["files"].get(event["path"]) == event["sha256"]]
+                if older:  # exactly an older release's file: a rollback, not an unknown modification
+                    finding["older_release"] = older[0]
+                verdict.findings.append(finding)
         seen = {e["path"] for e in actual}
         for want in expected:
             if want["path"] not in seen:
