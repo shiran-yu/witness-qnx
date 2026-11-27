@@ -49,7 +49,7 @@ through the standard TPM TIS interface, the same register interface a discrete T
  ├─ IFS script: dev-tpm-tis  → /dev/tpm0, /dev/tpm0-stats   (resource manager, type tpm_driver_t)
  ├─ startup.sh: witness-measure → /system and /etc, after mount ...... PCR 8
  ├─ post_start: witness-measure → applications, before launch ........ PCR 9
- └─ witnessd (QNX tss2 ESYS → libtss2-tcti-witness → /dev/tpm0), supervised:
+ └─ witnessd (QNX tss2 ESYS → linked-in Witness TCTI → /dev/tpm0), supervised:
         AK, quote PCR 0-9, PCR-bound device key certified by the AK, TCP 7650
                                   │
  host: witness verify ────────────┘  signature, nonce, PCRs, event-log replay, per-file findings
@@ -173,7 +173,15 @@ on: Operation not permitted (/system/bin/witnessd)
 on: Operation not permitted (/proc/boot/witness-measure)
 # echo touch /tmp/pwned > /boot/onboot                 (a boot hook; it would not be run anyway)
 sh: cannot create /boot/onboot: Read-only file system
+# swap /system/lib/libtss2-tcti-witness.so.0, then kill the agent so its supervisor restarts it
+  no effect: restarted agent 905237 runs the code measured at boot (the TCTI is linked in)
 ```
+
+Root can write `/system` and signal the agent, so the last check matters: the supervisor restarts the agent
+with `fork`, and the agent loads no library after its measured launch (the TCTI is linked into
+`witnessd`), so a swapped library cannot run under the agent's type until a reboot measures it.
+Killing the supervisor stops attestation (denial of service; the verifier then reports the device
+unreachable, not trusted).
 
 After `tamper config` and a reboot:
 
@@ -256,9 +264,9 @@ credential. Witness's mount step handles the qnx6 image this demo uses, not QTD 
 |---|---|---|
 | TPM TIS driver | [driver/tis.c](driver/tis.c) `tis_open`, `wait_sts`, `tis_transmit` | `mmap_device_memory` (TIS registers at 0xFED40000, `PROT_NOCACHE`); `InterruptAttachThread` + `InterruptWait` with `_NTO_INTR_WAIT_FLAGS_UNMASK`, bounded by `TimerTimeout(_NTO_TIMEOUT_INTR)`; polling fallback if the interrupt self-test gets no wake-up |
 | Resource manager | [driver/main.c](driver/main.c) `io_write`, `io_read`, `io_notify`, `io_read_stats`, `main` | `dispatch_create`, two `resmgr_attach` paths (`/dev/tpm0`, `/dev/tpm0-stats`), custom OCB (`IOFUNC_OCB_T`, `iofunc_mount_t` ocb calloc/free) holding each client's response, `iofunc_notify` for `select`/`poll`, `procmgr_daemon` |
-| TSS2 TCTI | [tcti/tcti-witness.c](tcti/tcti-witness.c) `Tss2_Tcti_Witness_Init`, `Tss2_Tcti_Info` | standard TCTI v2 module, loaded by QNX's `libtss2-tctildr` from the name `witness:/dev/tpm0` |
+| TSS2 TCTI | [tcti/tcti-witness.c](tcti/tcti-witness.c) `Tss2_Tcti_Witness_Init`, `Tss2_Tcti_Info` | standard TCTI v2 module: linked into `witnessd` (no library is loaded after its measured launch), and also built as `libtss2-tcti-witness.so.0` for any `libtss2-tctildr` client (`witness:/dev/tpm0`) |
 | Measurement | [tools/witness-measure.c](tools/witness-measure.c) `pcr_extend`, `measure_tree`, `measure_manifest` | runs from the IFS (`/proc/boot`), walks `/system` in sorted order (files by content, symlinks by target), raw `TPM2_PCR_Extend` through `/dev/tpm0`, event log in `/dev/shmem` |
-| Attestation agent | [agent/witnessd.c](agent/witnessd.c) `create_attestation_key`, `create_device_key`, `device_key_sign`, `policy_release_number`, `record_release_number`, `answer`, `flush_stale_handles`, `main` (supervisor) | QNX TCG stack from the SDP (`libtss2-esys`, `-mu`, `-rc`, `-tctildr`); `TPM2_Quote`; device key: `Create` with a `PolicyAuthorize` (release key) + `PolicyPCR` (PCR 0, 2, 7) authPolicy, `Load`, `Sign` in a policy session (`PolicyPCR` → `LoadExternal` + `VerifySignature` of the signed release policy → `PolicyAuthorize` → `PolicyPCR`), `Certify` by the AK; `fork` supervisor and `alarm` watchdog |
+| Attestation agent | [agent/witnessd.c](agent/witnessd.c) `create_attestation_key`, `create_device_key`, `device_key_sign`, `policy_release_number`, `record_release_number`, `answer`, `flush_stale_handles`, `main` (supervisor) | QNX TCG stack from the SDP (`libtss2-esys`, `-mu`, `-rc`) over the linked-in TCTI; `TPM2_Quote`; device key: `Create` with a `PolicyAuthorize` (release key) + `PolicyPCR` (PCR 0, 2, 7) authPolicy, `Load`, `Sign` in a policy session (`PolicyPCR` → `LoadExternal` + `VerifySignature` of the signed release policy → `PolicyAuthorize` → `PolicyPCR`), `Certify` by the AK; `fork` supervisor and `alarm` watchdog |
 | Boot customisation | [image/witness-image.sh](image/witness-image.sh) | `mkqnximage` snippets: driver started in the IFS script before the system partition is mounted; measurement in `startup_postfs`; application measurement and `witnessd` in `post_start`; IFS load address for current OVMF ([image/uefi/definitions.zz_witness](image/uefi/definitions.zz_witness)) |
 | Security policy | [image/witness.secpol](image/witness.secpol) | QNX secpol: every Witness process starts under its own type (`START_P(tpm_driver_t)` …); only `witness_measure_t` and `witnessd_t` may connect to the driver; the driver gets exactly `mem_phys` for its 4 KiB register page and `interrupt:5`. Built with `mkqnximage --secpol=secure --policy=…` |
 | QEMU target | [scripts/vm.sh](scripts/vm.sh) | OVMF + `tpm-tis` device + swtpm, KVM when available |
@@ -284,7 +292,7 @@ partitioning, pulses of its own, qvm or QTD.
 | Startup and boot customisation | `mkqnximage` snippets start the driver in the IFS script and measure `/system` and `/etc` right after mount, before any boot script reads them; the IFS load address is moved so current OVMF loads it | [image/witness-image.sh](image/witness-image.sh), [image/uefi/definitions.zz_witness](image/uefi/definitions.zz_witness) |
 | Security policies | Each component runs under its own secpol type; only the measurement tool and the agent may connect to the driver; root over ssh gets "Operation not permitted" | [image/witness.secpol](image/witness.secpol); `demo.sh attack` |
 | Real-time services | The agent runs at priority 8, below QNX's default 10; a 1 kHz `SCHED_FIFO` loop at 10 saw no more late periods during an attestation flood than idle (QEMU, three runs) | [agent/witnessd.c](agent/witnessd.c) `pthread_setschedparam`; [docs/evidence/latency.log](docs/evidence/latency.log) |
-| QNX's TCG software stack | The agent uses the SDP's `libtss2-esys`/`-mu`/`-rc`/`-tctildr`; Witness adds the TCTI module the SDP does not ship | [tcti/tcti-witness.c](tcti/tcti-witness.c) |
+| QNX's TCG software stack | The agent uses the SDP's `libtss2-esys`/`-mu`/`-rc`; Witness adds the TCTI module the SDP does not ship | [tcti/tcti-witness.c](tcti/tcti-witness.c) |
 
 ## How the verifier decides
 

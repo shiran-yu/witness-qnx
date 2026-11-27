@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 /* witnessd: remote-attestation agent for QNX 8.0, built on QNX's own TSS2 ESYS stack.
  *
- * Path: witnessd -> ESYS -> libtss2-tcti-witness -> dev-tpm-tis /dev/tpm0 -> TPM. After boot it is the
+ * Path: witnessd -> ESYS -> Witness TCTI (linked in) -> dev-tpm-tis /dev/tpm0 -> TPM. After boot it is the
  * only TPM client (the security policy admits no other), so it needs no resource manager. A supervisor
  * process restarts the agent if a request outlives the watchdog.
  *
@@ -38,7 +38,9 @@
 #include <tss2/tss2_esys.h>
 #include <tss2/tss2_mu.h>
 #include <tss2/tss2_rc.h>
-#include <tss2/tss2_tctildr.h>
+#include <tss2/tss2_tcti.h>
+
+TSS2_RC Tss2_Tcti_Witness_Init(TSS2_TCTI_CONTEXT *tcti_context, size_t *size, const char *config); /* tcti/tcti-witness.c */
 
 #define DEFAULT_PORT 7650
 #define QUOTE_PCR_MASK 0x0003FF /* PCR 0-9 */
@@ -859,11 +861,18 @@ static void watchdog_expired(int signo)
     _exit(70);
 }
 
-static int run_agent(int port, const char *tcti_conf)
+static int run_agent(int port, const char *tpm_device)
 {
     TSS2_TCTI_CONTEXT *tcti = NULL;
     alarm(WATCHDOG_SECONDS * 3); /* start-up, including provisioning */
-    TSS2_RC rc = Tss2_TctiLdr_Initialize(tcti_conf, &tcti);
+    /* The TCTI is linked in, not loaded: a restarted child must run only code mapped at the measured launch,
+     * never a library root could replace in /system/lib since boot. */
+    size_t size = 0;
+    TSS2_RC rc = Tss2_Tcti_Witness_Init(NULL, &size, tpm_device);
+    if (rc == TSS2_RC_SUCCESS && (tcti = calloc(1, size)) == NULL)
+        rc = TSS2_TCTI_RC_MEMORY;
+    if (rc == TSS2_RC_SUCCESS)
+        rc = Tss2_Tcti_Witness_Init(tcti, &size, tpm_device);
     if (rc == TSS2_RC_SUCCESS) {
         flush_stale_handles(tcti);
         rc = Esys_Initialize(&esys, tcti, NULL);
@@ -885,16 +894,16 @@ static int run_agent(int port, const char *tcti_conf)
 int main(int argc, char **argv)
 {
     int port = DEFAULT_PORT, opt, foreground = 0;
-    const char *tcti_conf = "witness:/dev/tpm0";
+    const char *tpm_device = "/dev/tpm0";
     while ((opt = getopt(argc, argv, "p:l:s:t:f")) != -1) {
         switch (opt) {
         case 'p': port = atoi(optarg); break;
         case 'l': eventlog_path = optarg; break;
         case 's': state_dir = optarg; break;
-        case 't': tcti_conf = optarg; break;
+        case 't': tpm_device = optarg; break;
         case 'f': foreground = 1; break;
         default:
-            fprintf(stderr, "usage: witnessd [-p port] [-l eventlog] [-s state-dir] [-t tcti] [-f]\n");
+            fprintf(stderr, "usage: witnessd [-p port] [-l eventlog] [-s state-dir] [-t tpm-device] [-f]\n");
             return 2;
         }
     }
@@ -912,7 +921,7 @@ int main(int argc, char **argv)
         time_t started = time(NULL);
         pid_t child = fork();
         if (child == 0)
-            return run_agent(port, tcti_conf);
+            return run_agent(port, tpm_device);
         int status = 0;
         if (child < 0 || waitpid(child, &status, 0) < 0)
             return EXIT_FAILURE;

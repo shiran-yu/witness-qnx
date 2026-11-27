@@ -189,6 +189,15 @@ attack)
                           "on -T witness_measure_t /proc/boot/witness-measure -p 8 -s forged" \
                           "echo touch /tmp/pwned > /boot/onboot"; do
                      echo "# $c"; sh -c "$c" 2>&1 && echo "  ALLOWED" || echo "  denied"; done'
+    # root may write /system/lib and signal the agent: swap the TPM library, kill the agent, see what its supervisor restarts
+    "${SSH[@]}" 'l=/system/lib/libtss2-tcti-witness.so.0; cp $l /data/var/witness/tcti.orig;
+                 echo "# swap $l, then kill the agent so its supervisor restarts it";
+                 cp $l $l.new && echo "# patched" >> $l.new && mv $l.new $l;
+                 kill $(pidin -f aN | grep witnessd | awk "{print \$1}" | sort -n | tail -1); sleep 8;
+                 a=$(pidin -f aN | grep witnessd | awk "{print \$1}" | sort -n | tail -1);
+                 if pidin -p $a mem | grep -q tcti-witness; then echo "  ALLOWED: restarted agent $a loaded it";
+                 else echo "  no effect: restarted agent $a runs the code measured at boot (the TCTI is linked in)"; fi;
+                 cp /data/var/witness/tcti.orig $l.new && mv $l.new $l && rm /data/var/witness/tcti.orig'
     ;;
 down)
     "${SSH[@]}" 'shutdown' >/dev/null 2>&1 || true
