@@ -59,7 +59,12 @@ asks the manufacturer to know and prove what software a device in the field is r
 | Medical devices (US) | FD&C Act §524B for cyber devices; FDA guidance: "Ensure that the authenticity of software, firmware, and configuration are validated prior to execution", "Hardware-based security solutions should be considered", anti-replay "with the use of cryptographic nonces" | since 29 Mar 2023; guidance of 3 Feb 2026 ([FDA](https://www.fda.gov/media/119933/download)) |
 | Industrial automation | IEC 62443-4-2 CR 3.14, integrity of the boot process: verify "the integrity of the firmware, software, and configuration data needed for the component's boot and runtime processes prior to use" (wording as given by [ISASecure](https://isasecure.org/hubfs/Webinars/Webinars%20PDFs/2019-August-8-Webinar.pdf)) | certification requirement |
 
-The failures are real: a backdoor in the Contec CMS8000 patient monitor allowed "device modification"
+The failures are real, and growing. Upstream Security analysed 494 publicly reported automotive and
+smart-mobility incidents from 2025: "92% of automotive cyber attacks were conducted remotely", and
+"61% of incidents had the potential to impact thousands to millions of mobility assets; 20% were
+massive-scale events" ([Upstream, 18 Feb 2026](https://www.prnewswire.com/il/news-releases/ransomware-attacks-on-automotive-and-smart-mobility-more-than-doubled-in-2025-according-to-new-research-by-upstream-security-302691468.html)).
+A remote attacker at fleet scale is exactly the case where an operator must ask each device to prove
+its state instead of assuming it. A backdoor in the Contec CMS8000 patient monitor allowed "device modification"
 ([CISA, Feb 2025](https://www.cisa.gov/resources-tools/resources/contec-cms8000-contains-backdoor));
 attackers compromised at least 75 Unitronics PLCs, 34 of them in US water and wastewater systems
 ([CISA AA23-335A](https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-335a)).
@@ -67,7 +72,10 @@ attackers compromised at least 75 Unitronics PLCs, 34 of them in US water and wa
 Witness maps onto these requirements directly: the release defines the expected measurement of every
 file (the role of RXSWIN integrity data), the device proves its boot state with a TPM signature over
 a fresh nonce, a change is reported by file name, and a device that is not in the released state
-loses the key it would use to talk to its fleet service.
+loses the key it would use to talk to its fleet service. Software updates are part of the same
+chain: a release signed on the build host keeps the device's key, and once it has run, the TPM
+itself refuses the older signed release, so "the version defined by the RXSWIN" cannot be swapped
+for a vulnerable earlier one.
 
 **Why QNX is the right foundation.** Attestation must never cost a control loop its deadline, and it
 must not become a new way into the device. QNX's architecture gives both, and Witness uses it:
