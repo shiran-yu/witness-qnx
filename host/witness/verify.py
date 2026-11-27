@@ -139,7 +139,7 @@ def _appraise(attestation: dict, nonce: bytes, reference: dict, enrollment: dict
         if not ok:
             return verdict
 
-    for pcr, label in ((8, "system partition (PCR 8)"), (9, "applications (PCR 9)")):
+    for pcr, label in ((8, "system and /etc (PCR 8)"), (9, "applications (PCR 9)")):
         expected = reference["events"][str(pcr)]
         actual = [e for e in events if e["pcr"] == pcr]
         before = len(verdict.findings)

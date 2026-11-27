@@ -1,8 +1,8 @@
 # Witness security policy for the mkqnximage QEMU image (--secpol=secure --policy=witness.secpol).
 # Base: learned by secpolgenerate on --secpol=develop boots running the golden path, including a
 # tampered boot (locked secret). Hand-tightened: user_root_t (an ssh root login) may not connect to
-# the TPM driver (tpm_driver_t) nor take a Witness type. The tabrm_t rules are left from learning;
-# the image no longer ships tabrm.
+# the TPM driver (tpm_driver_t) nor take a Witness type. The boot script itself may (it starts
+# them); witness-image.sh measures everything it reads from /system and /etc before it is used.
 
 # There have been one or more uses of secpol_resmgr_attach() that can have
 # permissions set for them in the policy. See the mount_point entries at
@@ -38,8 +38,6 @@ type slogger_t;
 type slogger_t__run;
 type sshd_t;
 type sshd_t__privsep;
-type tabrm_t;
-type tabrm_t__run;
 type tpm_driver_t;
 type user_root_t;
 type witness_measure_t;
@@ -448,26 +446,6 @@ allow sshd_t__privsep self:ability {
     setgid:15
 };
 
-# === Rules for type tabrm_t ============
-allow_attach tabrm_t {
-    /dev/tpmrm0
-};
-allow tabrm_t self:ability {
-    pathspace
-    prot_exec
-    priority:0-253
-    map_fixed
-    public_channel
-    channel_connect:tpm_driver_t,slogger_t,devb_t
-    settypeid:tabrm_t__run
-};
-derive_type tabrm_t run tabrm_t__run;
-
-# === Rules for type tabrm_t__run ============
-allow tabrm_t__run self:ability {
-    priority:0-253
-};
-
 # === Rules for type tpm_driver_t ============
 allow_attach tpm_driver_t {
     /dev/tpm0
@@ -504,7 +482,7 @@ allow user_root_t self:ability {
     xprocess_query:20-22,24,29-30,33-34,37-38,43-44,47-48
     channel_connect:slogger_t,devb_t,pipe_t
 };
-# Witness: no tpm_driver_t / tabrm_t above, on purpose. Only measured boot components use the TPM.
+# Witness: no tpm_driver_t above, on purpose. Only measured boot components use the TPM.
 
 # === Rules for type witness_measure_t ============
 allow witness_measure_t self:ability {

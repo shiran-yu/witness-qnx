@@ -6,7 +6,7 @@
 #   demo.sh up         boot it headless with a software TPM (swtpm) on the TIS interface
 #   demo.sh enroll     record the device's attestation key and firmware baseline (known-good boot)
 #   demo.sh verify     challenge the device and appraise its boot against the release
-#   demo.sh tamper [config|app|lib]  modify the device the way an attacker would, then reboot
+#   demo.sh tamper [config|app|lib|data]  modify the device the way an attacker would, then reboot
 #   demo.sh restore    undo the tamper, reboot
 #   demo.sh down       power off
 #   demo.sh attack     as root on the device, try to use the TPM directly (denied by the security policy)
@@ -100,14 +100,20 @@ tamper)
                      cp /system/lib/libtss2-rc.so.1 /system/lib/.rc.new && echo "# patched" >> /system/lib/.rc.new &&
                      mv /system/lib/.rc.new /system/lib/libtss2-rc.so.1'
         ;;
-    *) echo "tamper: config|app|lib" >&2; exit 2 ;;
+    data)
+        say "attacker appends a command to /etc/settings/network, which the boot script runs as root"
+        "${SSH[@]}" 'cp -n /data/var/etc/settings/network /data/var/witness/network.orig 2>/dev/null || true;
+                     echo "touch /data/var/witness/injected-command-ran" >> /data/var/etc/settings/network'
+        ;;
+    *) echo "tamper: config|app|lib|data" >&2; exit 2 ;;
     esac
     say "rebooting"
     reboot_device
     ;;
 restore)
     say "restoring the released files"
-    "${SSH[@]}" 'for f in sshd_config:/system/etc/ssh/sshd_config witnessd:/system/bin/witnessd libtss2-rc.so.1:/system/lib/libtss2-rc.so.1; do
+    "${SSH[@]}" 'rm -f /data/var/witness/injected-command-ran;
+                 for f in sshd_config:/system/etc/ssh/sshd_config witnessd:/system/bin/witnessd libtss2-rc.so.1:/system/lib/libtss2-rc.so.1 network:/data/var/etc/settings/network; do
                      o=/data/var/witness/${f%%:*}.orig; t=${f#*:};
                      [ -f $o ] && cp $o $t.restore && mv $t.restore $t && rm $o; done; true'
     reboot_device

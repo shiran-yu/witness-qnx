@@ -35,8 +35,8 @@ CHAIN = [
      "The QNX IFS (kernel, startup, boot script) is the released ifs.bin, measured by firmware.", ("boot image",)),
     ("disk", "Disk layout", "5",
      "The boot disk partition table is the released disk image's.", ("boot disk layout",)),
-    ("system", "System partition", "8",
-     "Every measured file on /system matches the release.", ("system partition",)),
+    ("system", "System and configuration", "8",
+     "Every file on /system and in /etc (/data/var/etc) matches the release.", ("system and /etc",)),
     ("apps", "Applications", "9",
      "Every measured application matches the release.", ("applications",)),
     ("key", "Device key", "0, 2, 4, 5, 7-9",
@@ -50,7 +50,7 @@ KIND_TEXT = {
     "not measured": "is in the release but was never measured",
     "firmware": "firmware state differs from enrollment",
 }
-PCR_PLACE = {4: "boot image", 5: "disk layout", 8: "system partition", 9: "applications"}
+PCR_PLACE = {4: "boot image", 5: "disk layout", 8: "system and configuration", 9: "applications"}
 
 
 def describe(finding: dict) -> dict:

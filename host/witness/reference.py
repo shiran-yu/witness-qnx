@@ -19,6 +19,7 @@ EXIT_BOOT_SERVICES = [hashlib.sha256(b"Exit Boot Services Invocation").digest(),
                       hashlib.sha256(b"Exit Boot Services Returned with Success").digest()]
 MISSING_DIGEST =hashlib.sha256(b"witness:missing").hexdigest()  # what witness-measure logs for an absent file
 SYSTEM_MARKER = "witness:system-measured"
+CONFIG_DIR = "/data/var/etc"  # /etc on the target: boot configuration read before anything is confined
 
 
 def _manifest_path(ifs_build: str, name: str) -> str | None:
@@ -82,9 +83,14 @@ def build_reference(image_dir: str) -> dict:
         raise ValueError(f"{ifs_build} has no witness-measure: run src/image/witness-image.sh on this image")
     apps_manifest = _manifest_path(ifs_build, "witness-apps.manifest")
 
-    # PCR 8: witness-measure -r /system, every file and symlink in strcmp order of the path, then the marker
+    system = sorted(files, key=str.encode)
+    config = {path: digest for path, digest in file_digests(os.path.join(build, "data.build"), image_dir, "/data",
+                                                             links).items() if path.startswith(CONFIG_DIR + "/")}
+    files.update(config)
+
+    # PCR 8: witness-measure -r /system, then -r /data/var/etc (each every file and symlink in strcmp order), then the marker
     events, pcr = {}, {}
-    events["8"], pcr["8"] = _expected_events(sorted(files, key=str.encode), files, SYSTEM_MARKER, links)
+    events["8"], pcr["8"] = _expected_events(system + sorted(config, key=str.encode), files, SYSTEM_MARKER, links)
     events["9"], pcr["9"] = _expected_events(read_manifest(apps_manifest) if apps_manifest else [], files, None)
 
     reference = {

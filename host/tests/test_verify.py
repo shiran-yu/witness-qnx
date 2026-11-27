@@ -27,7 +27,7 @@ def test_good_is_trusted(good, reference, enrollment):
     assert verdict.sealed == "unsealed"
     for name in ("attestation key", "quote signature", "freshness", "PCR values", "boot disk layout (PCR 5)",
                  "firmware (PCR 0,1,2,3,6,7)", "boot image (PCR 4)", "event log (PCR 8)", "event log (PCR 9)",
-                 "system partition (PCR 8)", "applications (PCR 9)"):
+                 "system and /etc (PCR 8)", "applications (PCR 9)"):
         assert checks(verdict)[name] is True
     json.dumps(verdict.to_dict())  # serialisable for --json
 
@@ -66,7 +66,7 @@ def test_tampered_config_named(tampered, reference, enrollment):
     actual = next(line.split()[1] for line in tampered["attestation"]["eventlog"] if line.endswith(SSHD_CONFIG))
     assert verdict.findings == [{"pcr": 8, "kind": "changed", "what": SSHD_CONFIG,
                                  "expected": expected, "actual": actual}]
-    assert failed(verdict) == ["system partition (PCR 8)", DEVICE_KEY]
+    assert failed(verdict) == ["system and /etc (PCR 8)", DEVICE_KEY]
     assert verdict.sealed == "locked"
 
 
@@ -288,7 +288,7 @@ def test_unexpected_and_unmeasured_files_named(good, reference, enrollment):
     sshd["path"] = "/system/bin/other"
     verdict = appraise(good["attestation"], good["nonce"], reference, enrollment)
     assert not verdict.trusted
-    assert failed(verdict) == ["system partition (PCR 8)"]
+    assert failed(verdict) == ["system and /etc (PCR 8)"]
     kinds = {(f["kind"], f["what"]) for f in verdict.findings}
     assert kinds == {("unexpected", "/system/bin/sshd"), ("not measured", "/system/bin/other")}
 

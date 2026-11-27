@@ -41,8 +41,10 @@ EOF
 
 # 4. startup.sh right after the file systems are mounted: measure before use
 cat > "$SNIPPETS/startup_postfs.witness" <<'EOF'
-echo "---> Witness: measuring system partition into PCR 8"
+echo "---> Witness: measuring system partition and boot configuration into PCR 8"
 START_P(witness_measure_t) /proc/boot/witness-measure -p 8 -r /system
+# /etc is /data/var/etc: start_net.sh sources settings/network as shell code, sshd reads passwd/shadow
+START_P(witness_measure_t) /proc/boot/witness-measure -p 8 -r /data/var/etc
 START_P(witness_measure_t) /proc/boot/witness-measure -p 8 -t marker -s "witness:system-measured"
 EOF
 
