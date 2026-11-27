@@ -1,4 +1,4 @@
-# Move the UEFI IFS load address out of the range OVMF uses for boot-services data (0x900000-0x177FFFF).
-# The stock 20m address makes current OVMF refuse the image ("is not an image").
+/* Move the UEFI IFS load address out of the range OVMF uses for boot-services data (0x900000-0x177FFFF).
+   The stock 20m address makes current OVMF refuse the image ("is not an image"). */
 #undef __BOOT_ADDR__
 #define __BOOT_ADDR__ 64m

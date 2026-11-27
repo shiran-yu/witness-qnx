@@ -12,7 +12,7 @@ CC = qcc -V$(QCC_TARGET)
 CFLAGS = -O2 -g -Wall -Wextra -Werror -std=gnu11 -D_QNX_SOURCE -fstack-protector-strong -D_FORTIFY_SOURCE=2
 OUT = build/$(ARCH)
 
-BINS = $(OUT)/dev-tpm-tis $(OUT)/tpm-raw $(OUT)/libtss2-tcti-witness.so.0
+BINS = $(OUT)/dev-tpm-tis $(OUT)/tpm-raw $(OUT)/libtss2-tcti-witness.so.0 $(OUT)/witness-measure
 
 all: $(BINS)
 
@@ -27,6 +27,9 @@ $(OUT)/tpm-raw: tools/tpm-raw.c | $(OUT)
 
 $(OUT)/libtss2-tcti-witness.so.0: tcti/tcti-witness.c | $(OUT)
 	$(CC) $(CFLAGS) -shared -fPIC -Wl,-soname,libtss2-tcti-witness.so.0 -o $@ tcti/tcti-witness.c
+
+$(OUT)/witness-measure: tools/witness-measure.c lib/sha256.c lib/sha256.h | $(OUT)
+	$(CC) $(CFLAGS) -Ilib -o $@ tools/witness-measure.c lib/sha256.c
 
 clean:
 	rm -rf build
