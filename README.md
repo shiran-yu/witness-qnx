@@ -239,6 +239,12 @@ driver chose (`interrupt driven` after its interrupt self-test, or polling):
 - witnessd talks to the TPM driver directly rather than through QNX's `tabrm` resource manager: in
   testing, `tabrm` twice left a client blocked forever, and after boot witnessd is the only TPM client.
 
+## Codelab
+
+[Measured boot on QNX 8.0: give your QEMU target a TPM](docs/codelab/qnx-tpm-measured-boot-qemu.md)
+teaches the first link on its own: boot QNX 8.0 through UEFI with a software TPM, read PCR 4 from
+QNX through `dev-tpm-tis`, and predict the same value on the host from `ifs.bin`.
+
 ## AI tools used
 
 Claude Code (Anthropic) wrote most of the code, scripts and documentation under the author's
