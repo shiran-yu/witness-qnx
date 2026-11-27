@@ -1,0 +1,548 @@
+# Witness security policy for the mkqnximage QEMU image (--secpol=secure --policy=witness.secpol).
+# Base: learned by secpolgenerate on --secpol=develop boots running the golden path, including a
+# tampered boot (locked secret). Hand-tightened: user_root_t (an ssh root login) may not connect to
+# the TPM driver (tpm_driver_t) or the resource manager (tabrm_t), nor take a Witness type.
+
+# There have been one or more uses of secpol_resmgr_attach() that can have
+# permissions set for them in the policy. See the mount_point entries at
+# the end.
+
+# Don't want any default abilities
+type default_rules;
+allow default_rules self:ability {};
+
+type console_t;
+type default;
+type devb_t;
+type devb_t__run;
+type devc_pty_t;
+type devc_pty_t__run;
+type dhcpcd_t;
+type dumper_t;
+type dumper_t__run;
+type fsevmgr_t;
+type fsevmgr_t__run;
+type io_sock_t;
+type io_sock_t__run;
+type io_usb_t;
+type mqueue_t;
+type mqueue_t__run;
+type pci_server_t;
+type pipe_t;
+type pipe_t__run;
+type qconn_t;
+type random_t;
+type random_t__run;
+type slogger_t;
+type slogger_t__run;
+type sshd_t;
+type sshd_t__privsep;
+type tabrm_t;
+type tabrm_t__run;
+type tpm_driver_t;
+type user_root_t;
+type witness_measure_t;
+type witnessd_t;
+
+ability vfs/mount-blk allow { root };
+ability vfs/pregrow allow { root };
+ability vfs/relearn allow { root };
+ability vfs/stats-clear allow { root };
+ability vfs/fs-control allow { root };
+ability network/privport allow { root };
+ability network/rawsocket allow { root };
+ability network/reuseport allow { root };
+ability network/ipsec allow { root };
+ability network/admin allow { root };
+ability network/jailroot allow { root nonroot };
+
+# === Rules for type default ============
+allow_link default {
+    /proc/boot/libsecpol.so.1
+};
+
+# === Rules for type devb_t ============
+allow_attach devb_t {
+    mount:/
+    /dev/hd0
+    /dev/hd0.efi.0
+    /dev/hd0.qnx6.1
+    /dev/hd0.qnx6.2
+    /boot
+    /system
+    /data
+};
+allow devb_t self:ability {
+    nonroot
+    pathspace
+    rsrcdbmgr
+    prot_exec
+    priority:0-253
+    map_fixed
+};
+allow devb_t self:ability {
+    setuid:20
+    setgid:20
+    mem_lock
+    interrupt:14-15
+    io:1
+    public_channel
+    channel_connect:slogger_t,pci_server_t,fsevmgr_t
+    settypeid:devb_t__run
+};
+derive_type devb_t run devb_t__run;
+
+# === Rules for type devb_t__run ============
+allow_attach devb_t__run {
+    /boot
+    /system
+    /data
+};
+allow devb_t__run self:ability {
+    nonroot
+    pathspace
+    rsrcdbmgr
+    prot_exec
+    priority:0-253
+    map_fixed
+};
+allow devb_t__run self:ability {
+    setuid:20
+    setgid:20
+};
+
+# === Rules for type devc_pty_t ============
+allow_attach devc_pty_t {
+    /dev/ttyp0
+    /dev/ptyp0
+    /dev/ttyp1
+    /dev/ptyp1
+    /dev/ttyp2
+    /dev/ptyp2
+    /dev/ttyp3
+    /dev/ptyp3
+    /dev/ttyp4
+    /dev/ptyp4
+    /dev/ttyp5
+    /dev/ptyp5
+    /dev/ttyp6
+    /dev/ptyp6
+    /dev/ttyp7
+    /dev/ptyp7
+};
+allow devc_pty_t self:ability {
+    nonroot
+    setuid:37
+    setgid:37
+    pathspace
+    rsrcdbmgr
+    prot_exec
+    priority:0-253
+    map_fixed
+    public_channel
+    channel_connect:slogger_t
+    settypeid:devc_pty_t__run
+};
+derive_type devc_pty_t run devc_pty_t__run;
+
+# === Rules for type devc_pty_t__run ============
+allow devc_pty_t__run self:ability {
+    nonroot
+    priority:0-253
+};
+
+# === Rules for type dhcpcd_t ============
+allow dhcpcd_t self:ability {
+    nonroot
+    spawn
+    fork
+    prot_exec
+    priority:0-253
+    pgrp
+    map_fixed
+    channel_connect:slogger_t,devb_t,random_t,pipe_t,io_sock_t
+    network/privport
+    network/rawsocket
+    network/admin
+    network/jailroot
+};
+allow dhcpcd_t self:ability {
+    setuid:38
+    channel_connect:io_sock_t
+};
+
+# === Rules for type dumper_t ============
+allow_attach dumper_t {
+    dumper+:/proc/dumper
+};
+allow dumper_t self:ability {
+    nonroot
+    pathspace
+    mem_lock
+    prot_exec
+    dumper
+    priority:0-253
+    map_fixed
+    public_channel
+    channel_connect:slogger_t,devb_t
+    settypeid:dumper_t__run
+};
+derive_type dumper_t run dumper_t__run;
+
+# === Rules for type dumper_t__run ============
+allow dumper_t__run self:ability {
+    nonroot
+    priority:0-253
+};
+
+# === Rules for type fsevmgr_t ============
+allow_attach fsevmgr_t {
+    /dev/fsmgr
+    /dev/fsnotify
+};
+allow fsevmgr_t self:ability {
+    nonroot
+    pathspace
+    prot_exec
+    map_fixed
+    public_channel
+    channel_connect:slogger_t,devb_t
+    settypeid:fsevmgr_t__run
+};
+derive_type fsevmgr_t run fsevmgr_t__run;
+
+# === Rules for type fsevmgr_t__run ============
+allow fsevmgr_t__run self:ability {
+    nonroot
+    channel_connect:devb_t
+};
+
+# === Rules for type io_sock_t ============
+allow_attach io_sock_t {
+    socket+:/dev/socket/1
+    socket+:/dev/socket/2
+    socket+:/dev/socket/28
+    socket+:/dev/socket/17
+    socket+:/dev/socket/38
+    socket+:/dev/socket/27
+    /dev/tun
+    /dev/tap
+    /dev/vmnet
+    mount:/
+    /dev/io-sock
+    /dev/bpf
+    /dev/netmap
+    /dev/pfil
+    /dev/pf
+};
+allow io_sock_t self:ability {
+    nonroot
+    getid
+    pathspace
+    rlimit:14
+    mem_phys:2164789248-2164793343
+    mem_lock
+    prot_exec
+    interrupt:256-258
+    io:0
+    map_fixed
+    public_channel
+    able_create
+    xprocess_query:33
+    channel_connect:slogger_t,pci_server_t,devb_t,random_t,io_usb_t
+    settypeid:io_sock_t__run
+};
+derive_type io_sock_t run io_sock_t__run;
+
+# === Rules for type io_sock_t__run ============
+allow io_sock_t__run self:ability {
+    nonroot
+    getid
+    channel_connect:devb_t,io_usb_t
+};
+
+# === Rules for type io_usb_t ============
+allow_attach io_usb_t {
+    mount+:/dev/usb/io-usb-otg
+    mount+:/dev/usb/ctrl
+    mount+:/dev/usb/devu-uhci.so
+    mount+:/dev/usb/devu-hcd-ehci.so
+    mount+:/dev/usb/devu-hcd-xhci.so
+};
+allow io_usb_t self:ability {
+    nonroot
+    pathspace
+    prot_exec
+    io:0
+    map_fixed
+    public_channel
+    xprocess_query:44
+    channel_connect:slogger_t,devb_t
+    xprocess_mem_read:33
+};
+
+# === Rules for type mqueue_t ============
+allow_attach mqueue_t {
+    mqueue:/
+    /dev/mqueue
+};
+allow mqueue_t self:ability {
+    nonroot
+    pathspace
+    confset:19-20,32
+    prot_exec
+    priority:0-253
+    map_fixed
+    public_channel
+    settypeid:mqueue_t__run
+};
+derive_type mqueue_t run mqueue_t__run;
+
+# === Rules for type mqueue_t__run ============
+allow mqueue_t__run self:ability {
+    nonroot
+    priority:0-253
+};
+
+# === Rules for type pci_server_t ============
+allow_attach pci_server_t {
+    all+:/dev/pci/server_id_1
+};
+allow pci_server_t self:ability {
+    nonroot
+    pathspace
+    rsrcdbmgr
+    mem_phys:0-4095,2147483648-2147487743,2164789248-2164793343,3758096384-3758100479,4026531840-4026535935
+    mem_peer:33
+    mem_lock
+    prot_exec
+    io:0
+    map_fixed
+    public_channel
+    xprocess_query:34
+    channel_connect:slogger_t
+};
+
+# === Rules for type pipe_t ============
+allow_attach pipe_t {
+    pipe:/
+    /dev/pipe
+};
+allow pipe_t self:ability {
+    nonroot
+    pathspace
+    prot_exec
+    priority:0-253
+    map_fixed
+    public_channel
+    settypeid:pipe_t__run
+};
+derive_type pipe_t run pipe_t__run;
+
+# === Rules for type pipe_t__run ============
+allow pipe_t__run self:ability {
+    nonroot
+    priority:0-253
+};
+
+# === Rules for type qconn_t ============
+allow_attach qconn_t {
+    /dev/profiler
+};
+allow qconn_t self:ability {
+    nonroot
+    pathspace
+    prot_exec
+    map_fixed
+    public_channel
+    channel_connect:devb_t,io_sock_t
+    xprocess_debug:29
+    xprocess_mem_read:29
+    network/jailroot
+};
+
+# === Rules for type random_t ============
+allow_attach random_t {
+    /dev/random
+    /dev/urandom
+};
+allow random_t self:ability {
+    nonroot
+    priority:0-253
+    srandom
+    channel_connect:devb_t
+    settypeid:random_t__run
+};
+allow random_t self:ability {
+    setuid:22
+    setgid:22
+    pathspace
+    mem_lock
+    prot_exec
+    map_fixed
+    public_channel
+    channel_connect:slogger_t
+};
+derive_type random_t run random_t__run;
+
+# === Rules for type random_t__run ============
+allow random_t__run self:ability {
+    nonroot
+    priority:0-253
+    srandom
+};
+
+# === Rules for type slogger_t ============
+allow_attach slogger_t {
+    /dev/slog
+    /dev/slog2/notify
+    /dev/slog2/stdout
+    /dev/slog2/stderr
+    /dev/console
+};
+allow slogger_t self:ability {
+    nonroot
+    pathspace
+    prot_exec
+    priority:0-253
+    map_fixed
+    public_channel
+    xprocess_query:0,37-38,47
+    channel_connect:random_t
+    settypeid:slogger_t__run
+};
+derive_type slogger_t run slogger_t__run;
+
+# === Rules for type slogger_t__run ============
+allow slogger_t__run self:ability {
+    nonroot
+    priority:0-253
+    xprocess_query:0,37-38,47
+    channel_connect:random_t
+};
+
+# === Rules for type sshd_t ============
+allow sshd_t self:ability {
+    nonroot
+    spawn
+    fork
+    prot_exec
+    pgrp
+    map_fixed
+    chroot:0
+    channel_connect:slogger_t,devb_t,random_t,pipe_t,io_sock_t
+    settypeid:sshd_t__privsep,user_root_t
+    network/privport
+    network/jailroot
+};
+allow sshd_t self:ability {
+    gain_priv:setuid,setgid
+};
+derive_type sshd_t privsep sshd_t__privsep;
+
+# === Rules for type sshd_t__privsep ============
+allow sshd_t__privsep self:ability {
+    nonroot
+    setuid:15
+    setgid:15
+};
+
+# === Rules for type tabrm_t ============
+allow_attach tabrm_t {
+    /dev/tpmrm0
+};
+allow tabrm_t self:ability {
+    pathspace
+    prot_exec
+    priority:0-253
+    map_fixed
+    public_channel
+    channel_connect:tpm_driver_t,slogger_t,devb_t
+    settypeid:tabrm_t__run
+};
+derive_type tabrm_t run tabrm_t__run;
+
+# === Rules for type tabrm_t__run ============
+allow tabrm_t__run self:ability {
+    priority:0-253
+};
+
+# === Rules for type tpm_driver_t ============
+allow_attach tpm_driver_t {
+    /dev/tpm0
+    /dev/tpm0-stats
+};
+allow tpm_driver_t self:ability {
+    pathspace
+    mem_phys:4275306496-4275310591
+    prot_exec
+    interrupt:5
+    priority:0-253
+    map_fixed
+    public_channel
+};
+
+# === Rules for type user_root_t ============
+allow user_root_t self:ability {
+    nonroot
+    setuid:0
+    setgid:0
+    fork
+    channel_connect:slogger_t,devb_t,io_sock_t
+    network/jailroot
+};
+allow user_root_t self:ability {
+    setgid:0
+    mem_lock
+    spawn
+    prot_exec
+    priority:0-253
+    signal:0,15,19,25
+    pgrp
+    map_fixed
+    xprocess_query:20-22,24,29-30,33-34,37-38,43-44,47-48
+    channel_connect:slogger_t,devb_t,pipe_t
+};
+# Witness: no tpm_driver_t / tabrm_t above, on purpose. Only measured boot components use the TPM.
+
+# === Rules for type witness_measure_t ============
+allow witness_measure_t self:ability {
+    prot_exec
+    map_fixed
+    channel_connect:tpm_driver_t,devb_t
+};
+
+# === Rules for type witnessd_t ============
+allow witnessd_t self:ability {
+    fork
+    prot_exec
+    priority:0-253
+    map_fixed
+    channel_connect:slogger_t,devb_t,random_t,io_sock_t,tabrm_t
+    network/jailroot
+};
+
+# === Mount point permission rules ============
+# These represent uses of secpol_resmgr_attach(). By using mount_point
+# rules you can set the permissions used for these mount points.
+# mount_point ... /dev/console;
+# mount_point ... /dev/pci/server_id_1;
+# mount_point ... /dev/fsmgr;
+# mount_point ... /dev/fsnotify;
+# mount_point ... /dev/random;
+# mount_point ... /dev/socket/1;
+# mount_point ... /dev/socket/2;
+# mount_point ... /dev/socket/28;
+# mount_point ... /dev/socket/17;
+# mount_point ... /dev/socket/38;
+# mount_point ... /dev/socket/27;
+# mount_point ... /dev/tun;
+# mount_point ... /dev/tap;
+# mount_point ... /dev/vmnet;
+# mount_point ... /;
+# mount_point ... /dev/io-sock/;
+# mount_point ... /dev/bpf;
+# mount_point ... /dev/netmap;
+# mount_point ... /dev/pfil;
+# mount_point ... /dev/pf;
+# mount_point ... /dev/tpmrm0;

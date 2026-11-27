@@ -9,13 +9,15 @@
 #   demo.sh tamper [config|app]   modify the device the way an attacker would, then reboot
 #   demo.sh restore    undo the tamper, reboot
 #   demo.sh down       power off
-# Env: WORK (default src/.work), SSH_PORT (10022; attestation on SSH_PORT+1)
+#   demo.sh attack     as root on the device, try to use the TPM directly (denied by the security policy)
+# Env: WORK (default src/.work), SSH_PORT (10022; attestation on SSH_PORT+1), SECPOL (secure|no)
 set -euo pipefail
 
 SRC=$(cd "$(dirname "$0")/.." && pwd)
 WORK=${WORK:-$SRC/.work}
 IMAGE=$WORK/vm
 SSH_PORT=${SSH_PORT:-10022}
+SECPOL=${SECPOL:-secure}  # secure: QNX security policy image/witness.secpol; no: unconfined (applies when the image is created)
 DEVICE=127.0.0.1:$((SSH_PORT + 1))
 KEY=${WITNESS_SSH_KEY:-$WORK/id_ed25519}
 SSH=(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=10 -i "$KEY" -p "$SSH_PORT" root@127.0.0.1)
@@ -55,7 +57,9 @@ build)
     say "creating a UEFI QNX 8.0 image with the Witness layer"
     if [ ! -d "$IMAGE" ]; then
         mkdir -p "$IMAGE"
-        (cd "$IMAGE" && mkqnximage --type=qemu --arch=x86_64 --boot-mode=uefi --ip=dhcp --cpu=2 --ram=1G \
+        secpol=(--secpol=no)
+        [ "$SECPOL" = secure ] && secpol=(--secpol=secure --policy="$SRC/image/witness.secpol")
+        (cd "$IMAGE" && mkqnximage --type=qemu --arch=x86_64 --boot-mode=uefi "${secpol[@]}" --ip=dhcp --cpu=2 --ram=1G \
             --ssh-ident="$KEY.pub" --noprompt >/dev/null)
     fi
     "$SRC/image/witness-image.sh" "$IMAGE" >/dev/null
@@ -101,13 +105,20 @@ restore)
                      [ -f $o ] && cp $o $t.restore && mv $t.restore $t && rm $o; done; true'
     reboot_device
     ;;
+attack)
+    say "root on the device tries to extend PCR 8 back, use the resource manager, and borrow a measured type"
+    "${SSH[@]}" 'for c in "tpm-raw 80020000004100000182000000080000000940000009000000000000000001000b$(printf %064d 0)" \
+                          "env TPM_DEVICE=/dev/tpmrm0 tpm-raw 80010000000c0000017b0008" \
+                          "on -T witness_measure_t /proc/boot/witness-measure -p 8 -s forged"; do
+                     echo "# $c"; sh -c "$c" 2>&1 && echo "  ALLOWED" || echo "  denied"; done'
+    ;;
 down)
     "${SSH[@]}" 'shutdown' >/dev/null 2>&1 || true
     sleep 2
     (cd "$IMAGE" && "$SRC/scripts/vm.sh" stop)
     ;;
 *)
-    sed -n '3,13p' "$0"
+    sed -n '3,14p' "$0"
     exit 2
     ;;
 esac

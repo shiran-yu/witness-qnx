@@ -32,8 +32,10 @@ static int tpm_command(const uint8_t *cmd, size_t len, uint32_t *rc)
 {
     uint8_t resp[64];
     int fd = open(device_path, O_RDWR);
-    if (fd < 0)
+    if (fd < 0) {
+        fprintf(stderr, "witness-measure: open %s: %s\n", device_path, strerror(errno));
         return -1;
+    }
     ssize_t n = write(fd, cmd, len);
     if (n == (ssize_t)len)
         n = read(fd, resp, sizeof resp);

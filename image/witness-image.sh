@@ -36,15 +36,15 @@ EOF
 # 3. IFS script: start the driver before anything from the (not yet measured) system partition runs
 cat > "$SNIPPETS/ifs_start.witness" <<'EOF'
     display_msg "---> Witness: starting TPM driver"
-    dev-tpm-tis -i 5
+    START_P(tpm_driver_t) dev-tpm-tis -i 5
     waitfor /dev/tpm0 5
 EOF
 
 # 4. startup.sh right after the file systems are mounted: measure before use
 cat > "$SNIPPETS/startup_postfs.witness" <<'EOF'
 echo "---> Witness: measuring system partition into PCR 8"
-/proc/boot/witness-measure -p 8 -m /proc/boot/witness.manifest
-/proc/boot/witness-measure -p 8 -t marker -s "witness:system-measured"
+START_P(witness_measure_t) /proc/boot/witness-measure -p 8 -m /proc/boot/witness.manifest
+START_P(witness_measure_t) /proc/boot/witness-measure -p 8 -t marker -s "witness:system-measured"
 EOF
 
 # 5. system partition: QNX TCG stack + Witness user space
@@ -81,12 +81,12 @@ EOF
 # 6. post start: resource manager over our TCTI; application layer measured into PCR 9, then started
 cat > "$SNIPPETS/post_start.witness" <<'EOF'
 echo "---> Witness: starting tabrm (/dev/tpmrm0) over libtss2-tcti-witness"
-tabrm -C /system/etc/witness/tabrm.cfg
+START_P(tabrm_t) tabrm -C /system/etc/witness/tabrm.cfg
 waitfor /dev/tpmrm0 5
 echo "---> Witness: measuring applications into PCR 9"
-/proc/boot/witness-measure -p 9 -m /proc/boot/witness-apps.manifest
+START_P(witness_measure_t) /proc/boot/witness-measure -p 9 -m /proc/boot/witness-apps.manifest
 echo "---> Witness: starting attestation agent (port 7650)"
-witnessd
+START_P(witnessd_t) witnessd
 EOF
 
 echo "witness-image: snippets written to $SNIPPETS"
