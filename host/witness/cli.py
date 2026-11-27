@@ -61,6 +61,7 @@ def main(argv=None) -> int:
         command.add_argument("-r", "--reference", required=True)
         command.add_argument("--state", default=".witness", help="directory for enrollment records")
         command.add_argument("--json", action="store_true", help="print the verdict as JSON")
+        command.add_argument("--save", metavar="FILE", help="also save the nonce and raw attestation (evidence)")
 
     args = parser.parse_args(argv)
     if args.command == "reference":
@@ -78,6 +79,9 @@ def main(argv=None) -> int:
     path = enrollment_path(args.state, args.device)
     nonce = os.urandom(20)
     attestation = request_attestation(args.device, nonce)
+    if args.save:
+        with open(args.save, "w") as out:
+            json.dump({"nonce": nonce.hex(), "attestation": attestation}, out, indent=1)
 
     if args.command == "enroll":
         verdict = appraise(attestation, nonce, reference_values, None)

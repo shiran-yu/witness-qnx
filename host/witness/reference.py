@@ -87,7 +87,7 @@ def build_reference(image_dir: str) -> dict:
     reference = {
         "version": 2,
         "created": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
-        "image": os.path.abspath(image_dir),
+        "image": os.path.basename(os.path.normpath(image_dir)),
         "boot_mode": "uefi" if uefi else "kernel",
         "ifs_sha256": hashlib.sha256(open(ifs_path, "rb").read()).hexdigest(),
         "events": events,
