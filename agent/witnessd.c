@@ -123,7 +123,7 @@ static TSS2_RC create_storage_key(ESYS_TR *storage_key)
 }
 
 /* PolicyPCR over the current values of the seal PCRs, in a trial (digest only) or real session. */
-static TSS2_RC pcr_policy_session(TPM2_SE session_type, ESYS_TR *session)
+static TSS2_RC pcr_policy_session(TPM2_SE session_type, uint32_t pcr_mask, ESYS_TR *session)
 {
     TPMT_SYM_DEF symmetric = {.algorithm = TPM2_ALG_NULL};
     TSS2_RC rc = Esys_StartAuthSession(esys, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE,
@@ -132,7 +132,7 @@ static TSS2_RC pcr_policy_session(TPM2_SE session_type, ESYS_TR *session)
         return rc;
     TPM2B_DIGEST current_values = {0}; /* empty: the TPM uses the PCRs as they are now */
     TPML_PCR_SELECTION selection;
-    selection_from_mask(&selection, SEAL_PCR_MASK);
+    selection_from_mask(&selection, pcr_mask);
     rc = Esys_PolicyPCR(esys, *session, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, &current_values, &selection);
     if (rc != TSS2_RC_SUCCESS)
         Esys_FlushContext(esys, *session);
@@ -141,7 +141,7 @@ static TSS2_RC pcr_policy_session(TPM2_SE session_type, ESYS_TR *session)
 
 static int write_blob(const char *path, const uint8_t *data, size_t size)
 {
-    char tmp[256];
+    char tmp[256 + sizeof ".tmp"]; /* callers pass paths up to 256 bytes */
     snprintf(tmp, sizeof tmp, "%s.tmp", path);
     int fd = open(tmp, O_WRONLY | O_CREAT | O_TRUNC, 0600);
     if (fd < 0)
@@ -152,18 +152,184 @@ static int write_blob(const char *path, const uint8_t *data, size_t size)
     return ok && rename(tmp, path) == 0 ? 0 : -1;
 }
 
-/* First boot: a P-256 signing key, created inside the TPM, usable only through PolicyPCR over SEAL_PCR_MASK. */
+/* Signed releases. RELEASE_PUB (in the IFS) holds the release public key; when present the device key's
+ * policy is PolicyAuthorize(release key), and each release ships a policy file signed by that key:
+ * PolicyPCR over its PCRs, then PolicyAuthorize with the signature checked by the TPM. */
+#define RELEASE_PUB "/proc/boot/witness-release.pub"
+#define RELEASE_POLICY "release-policy" /* in state_dir; signed, so it needs no measurement */
+
+struct release {
+    uint32_t pcr_mask;
+    uint8_t approved[32], r[32], s[32], x[32], y[32];
+    int have_key, have_policy;
+};
+
+static int parse_hex(const char *text, uint8_t *out, size_t size)
+{
+    for (size_t i = 0; i < size; i++) {
+        unsigned v;
+        if (sscanf(text + 2 * i, "%2x", &v) != 1)
+            return -1;
+        out[i] = (uint8_t)v;
+    }
+    return text[2 * size] == '\0' || text[2 * size] == '\n' ? 0 : -1;
+}
+
+/* Reads `key value` lines; a file that is absent or malformed leaves the fields unset. */
+static void read_release_file(const char *path, struct release *release)
+{
+    FILE *file = fopen(path, "r");
+    char line[256], key[32], value[160];
+    int seen = 0;
+    while (file && fgets(line, sizeof line, file)) {
+        if (sscanf(line, "%31s %159s", key, value) != 2)
+            continue;
+        if (!strcmp(key, "pcr_mask") && sscanf(value, "%x", &release->pcr_mask) == 1)
+            seen |= 1;
+        else if (!strcmp(key, "approved_policy") && !parse_hex(value, release->approved, 32))
+            seen |= 2;
+        else if (!strcmp(key, "signature_r") && !parse_hex(value, release->r, 32))
+            seen |= 4;
+        else if (!strcmp(key, "signature_s") && !parse_hex(value, release->s, 32))
+            seen |= 8;
+        else if (!strcmp(key, "release_x") && !parse_hex(value, release->x, 32))
+            seen |= 16;
+        else if (!strcmp(key, "release_y") && !parse_hex(value, release->y, 32))
+            seen |= 32;
+    }
+    if (file)
+        fclose(file);
+    release->have_key = (seen & 48) == 48;
+    release->have_policy = (seen & 63) == 63 && (release->pcr_mask & ~SEAL_PCR_MASK) == 0;
+}
+
+static struct release read_release(void)
+{
+    struct release release = {0}, policy = {0};
+    char path[256];
+    read_release_file(RELEASE_PUB, &release);
+    snprintf(path, sizeof path, "%s/%s", state_dir, RELEASE_POLICY);
+    read_release_file(path, &policy);
+    /* the policy counts only if it names the release key that the image trusts */
+    if (release.have_key && policy.have_policy && !memcmp(policy.x, release.x, 32) && !memcmp(policy.y, release.y, 32))
+        return policy;
+    return release;
+}
+
+/* The release public key, loaded as an external key in the owner hierarchy (so its tickets are valid). */
+static TSS2_RC load_release_key(const struct release *release, ESYS_TR *key, TPM2B_NAME **name)
+{
+    TPM2B_PUBLIC public = {
+        .publicArea = {
+            .type = TPM2_ALG_ECC,
+            .nameAlg = TPM2_ALG_SHA256,
+            .objectAttributes = TPMA_OBJECT_SIGN_ENCRYPT | TPMA_OBJECT_USERWITHAUTH,
+            .parameters.eccDetail = {
+                .symmetric.algorithm = TPM2_ALG_NULL,
+                .scheme = {.scheme = TPM2_ALG_ECDSA, .details.ecdsa.hashAlg = TPM2_ALG_SHA256},
+                .curveID = TPM2_ECC_NIST_P256,
+                .kdf.scheme = TPM2_ALG_NULL,
+            },
+            .unique.ecc = {.x.size = 32, .y.size = 32},
+        },
+    };
+    memcpy(public.publicArea.unique.ecc.x.buffer, release->x, 32);
+    memcpy(public.publicArea.unique.ecc.y.buffer, release->y, 32);
+    TSS2_RC rc = Esys_LoadExternal(esys, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, NULL, &public, ESYS_TR_RH_OWNER, key);
+    if (rc == TSS2_RC_SUCCESS && name && (rc = Esys_TR_GetName(esys, *key, name)) != TSS2_RC_SUCCESS)
+        Esys_FlushContext(esys, *key);
+    return rc;
+}
+
+/* authPolicy = H(H(0^32 || TPM_CC_PolicyAuthorize || keyName) || policyRef), policyRef empty */
+static TSS2_RC authorize_policy_digest(const TPM2B_NAME *name, TPM2B_DIGEST **policy)
+{
+    TPM2B_MAX_BUFFER buffer = {.size = (UINT16)(32 + 4 + name->size)};
+    TPM2B_DIGEST *first = NULL;
+    TPMT_TK_HASHCHECK *ticket = NULL;
+    memset(buffer.buffer, 0, 32);
+    buffer.buffer[32] = 0x00, buffer.buffer[33] = 0x00, buffer.buffer[34] = 0x01, buffer.buffer[35] = 0x6A;
+    memcpy(buffer.buffer + 36, name->name, name->size);
+    TSS2_RC rc = Esys_Hash(esys, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, &buffer, TPM2_ALG_SHA256, ESYS_TR_RH_NULL,
+                           &first, &ticket);
+    Esys_Free(ticket);
+    ticket = NULL;
+    if (rc != TSS2_RC_SUCCESS)
+        return rc;
+    buffer.size = first->size;
+    memcpy(buffer.buffer, first->buffer, first->size);
+    Esys_Free(first);
+    rc = Esys_Hash(esys, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, &buffer, TPM2_ALG_SHA256, ESYS_TR_RH_NULL, policy,
+                   &ticket);
+    Esys_Free(ticket);
+    return rc;
+}
+
+/* In a policy session already past PolicyPCR: have the TPM check the release signature, then PolicyAuthorize. */
+static TSS2_RC authorize_release(ESYS_TR session, const struct release *release)
+{
+    ESYS_TR key;
+    TPM2B_NAME *name = NULL;
+    TPM2B_DIGEST *a_hash = NULL;
+    TPMT_TK_HASHCHECK *hash_ticket = NULL;
+    TPMT_TK_VERIFIED *verified = NULL;
+    TPM2B_MAX_BUFFER approved_buffer = {.size = 32};
+    memcpy(approved_buffer.buffer, release->approved, 32);
+    TSS2_RC rc = load_release_key(release, &key, &name);
+    if (rc != TSS2_RC_SUCCESS)
+        return rc;
+    rc = Esys_Hash(esys, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, &approved_buffer, TPM2_ALG_SHA256, ESYS_TR_RH_NULL,
+                   &a_hash, &hash_ticket);
+    if (rc == TSS2_RC_SUCCESS) {
+        TPMT_SIGNATURE signature = {.sigAlg = TPM2_ALG_ECDSA};
+        signature.signature.ecdsa.hash = TPM2_ALG_SHA256;
+        signature.signature.ecdsa.signatureR.size = 32;
+        signature.signature.ecdsa.signatureS.size = 32;
+        memcpy(signature.signature.ecdsa.signatureR.buffer, release->r, 32);
+        memcpy(signature.signature.ecdsa.signatureS.buffer, release->s, 32);
+        rc = Esys_VerifySignature(esys, key, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, a_hash, &signature, &verified);
+    }
+    if (rc == TSS2_RC_SUCCESS) {
+        TPM2B_DIGEST approved = {.size = 32};
+        TPM2B_NONCE policy_ref = {0};
+        memcpy(approved.buffer, release->approved, 32);
+        rc = Esys_PolicyAuthorize(esys, session, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, &approved, &policy_ref, name,
+                                  verified);
+    }
+    Esys_FlushContext(esys, key);
+    Esys_Free(name);
+    Esys_Free(a_hash);
+    Esys_Free(hash_ticket);
+    Esys_Free(verified);
+    return rc;
+}
+
+/* First boot: a P-256 signing key, created inside the TPM, usable only through its policy: PolicyAuthorize by
+ * the release key when the image carries one, else PolicyPCR over SEAL_PCR_MASK. */
 static TSS2_RC create_device_key(ESYS_TR storage_key, const char *blob_path)
 {
     ESYS_TR trial;
     TPM2B_DIGEST *policy = NULL;
     TPM2B_PRIVATE *sealed_private = NULL;
     TPM2B_PUBLIC *sealed_public = NULL;
-    TSS2_RC rc = pcr_policy_session(TPM2_SE_TRIAL, &trial);
-    if (rc != TSS2_RC_SUCCESS)
-        return rc;
-    rc = Esys_PolicyGetDigest(esys, trial, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, &policy);
-    Esys_FlushContext(esys, trial);
+    struct release release = read_release();
+    TSS2_RC rc;
+    if (release.have_key) {
+        ESYS_TR key;
+        TPM2B_NAME *name = NULL;
+        rc = load_release_key(&release, &key, &name);
+        if (rc != TSS2_RC_SUCCESS)
+            return rc;
+        Esys_FlushContext(esys, key);
+        rc = authorize_policy_digest(name, &policy);
+        Esys_Free(name);
+    } else {
+        rc = pcr_policy_session(TPM2_SE_TRIAL, SEAL_PCR_MASK, &trial);
+        if (rc != TSS2_RC_SUCCESS)
+            return rc;
+        rc = Esys_PolicyGetDigest(esys, trial, ESYS_TR_NONE, ESYS_TR_NONE, ESYS_TR_NONE, &policy);
+        Esys_FlushContext(esys, trial);
+    }
     if (rc != TSS2_RC_SUCCESS)
         return rc;
 
@@ -224,7 +390,15 @@ static TSS2_RC device_key_sign(const uint8_t *data, size_t size, TPMT_SIGNATURE 
     if (rc != TSS2_RC_SUCCESS)
         return rc;
     ESYS_TR session;
-    rc = pcr_policy_session(TPM2_SE_POLICY, &session);
+    struct release release = read_release();
+    if (release.have_key && !release.have_policy) {
+        Esys_Free(digest);
+        Esys_Free(ticket);
+        return TSS2_ESYS_RC_BAD_VALUE; /* no signed policy for this release: the key stays locked */
+    }
+    rc = pcr_policy_session(TPM2_SE_POLICY, release.have_key ? release.pcr_mask : SEAL_PCR_MASK, &session);
+    if (rc == TSS2_RC_SUCCESS && release.have_key && (rc = authorize_release(session, &release)) != TSS2_RC_SUCCESS)
+        Esys_FlushContext(esys, session);
     if (rc == TSS2_RC_SUCCESS) {
         TPMT_SIG_SCHEME scheme = {.scheme = TPM2_ALG_NULL}; /* the key's own ECDSA-SHA256 */
         rc = Esys_Sign(esys, device_key, session, ESYS_TR_NONE, ESYS_TR_NONE, digest, &scheme, ticket, signature);
@@ -284,7 +458,8 @@ static void provision_or_load(void)
         if (rc != TSS2_RC_SUCCESS)
             fail("create device key", rc);
         else
-            fprintf(stderr, "witnessd: provisioned: device key bound to PCR 0,2,4,5,7,8,9\n");
+            fprintf(stderr, "witnessd: provisioned: device key bound to %s\n",
+                    read_release().have_key ? "releases signed by the release key" : "PCR 0,2,4,5,7,8,9");
     }
     rc = load_device_key(storage_key, blob_path);
     Esys_FlushContext(esys, storage_key);
@@ -292,13 +467,18 @@ static void provision_or_load(void)
     if (rc == TSS2_RC_SUCCESS)
         rc = device_key_sign((const uint8_t *)"boot", 4, &probe);
     Esys_Free(probe);
+    struct release release = read_release();
     if (rc == TSS2_RC_SUCCESS) {
         sealed_state = "unsealed";
-        fprintf(stderr, "witnessd: device key released (boot state matches the provisioned state)\n");
+        fprintf(stderr, "witnessd: device key released (%s)\n",
+                release.have_key ? "boot state matches a signed release" : "boot state matches the provisioned state");
+    } else if (release.have_key && !release.have_policy) {
+        sealed_state = "locked";
+        fprintf(stderr, "witnessd: device key locked until a signed release policy is delivered\n");
     } else {
         sealed_state = "locked"; /* fail closed whatever the reason */
-        fprintf(stderr, "witnessd: device key LOCKED: boot state differs from provisioning (%s)\n",
-                Tss2_RC_Decode(rc));
+        fprintf(stderr, "witnessd: device key LOCKED: boot state differs from %s (%s)\n",
+                release.have_key ? "the signed release" : "provisioning", Tss2_RC_Decode(rc));
     }
 }
 
@@ -407,10 +587,11 @@ static void answer(FILE *out, const char *request)
     fprintf(out, "\",");
     if (read_pcrs(out) != TSS2_RC_SUCCESS)
         fprintf(out, "\"pcrs_error\":true,");
-    fprintf(out, "\"sealed\":");
-    json_string(out, sealed_state);
     TPMT_SIGNATURE *device_signature = NULL;
     rc = device_key_sign(nonce.buffer, nonce.size, &device_signature);
+    /* the state of this request, not of start-up: a release policy may have arrived since */
+    fprintf(out, "\"sealed\":");
+    json_string(out, rc == TSS2_RC_SUCCESS ? "unsealed" : device_key == ESYS_TR_NONE ? sealed_state : "locked");
     if (rc == TSS2_RC_SUCCESS) {
         fprintf(out, ",\"device_key\":{\"public\":\"");
         offset = 0;

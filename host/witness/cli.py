@@ -114,9 +114,12 @@ def main(argv=None) -> int:
         serve(fleet, args.host, args.port)
         return 0
     if args.command == "release-key":
-        from .release import make_release_key
+        from .release import load_release_key, make_release_key, public_xy
         make_release_key(args.path)
-        print(f"wrote {args.path} (keep it on the build host)")
+        x, y = public_xy(load_release_key(args.path))
+        with open(args.path + ".pub", "w") as out:  # goes into the IFS as /proc/boot/witness-release.pub
+            out.write(f"release_x {x.hex()}\nrelease_y {y.hex()}\n")
+        print(f"wrote {args.path} (keep it on the build host) and {args.path}.pub (for the image)")
         return 0
     if args.command == "reference":
         result = build_reference(args.image_dir)

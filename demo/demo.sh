@@ -22,6 +22,7 @@ DEVICE=127.0.0.1:$((SSH_PORT + 1))
 KEY=${WITNESS_SSH_KEY:-$WORK/id_ed25519}
 SSH=(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=10 -i "$KEY" -p "$SSH_PORT" root@127.0.0.1)
 WITNESS=(uv run --project "$SRC/host" witness)
+RELEASE_KEY=${RELEASE_KEY:-$WORK/release-key.pem}
 
 say() { printf '\033[1m==> %s\033[0m\n' "$*"; }
 
@@ -38,6 +39,12 @@ EOF
     done
     echo "witnessd did not come up; see $IMAGE/output/console.log" >&2
     return 1
+}
+
+# the signed policy of the current release, delivered the way an update agent would (it is signed, not measured)
+push_release_policy() {
+    say "delivering the signed release policy to /data/var/witness/release-policy"
+    "${SSH[@]}" 'mkdir -p /data/var/witness && cat > /data/var/witness/release-policy' < "$WORK/reference.json.policy"
 }
 
 reboot_device() {
@@ -62,15 +69,18 @@ build)
         (cd "$IMAGE" && mkqnximage --type=qemu --arch=x86_64 --boot-mode=uefi "${secpol[@]}" --ip=dhcp --cpu=2 --ram=1G \
             --ssh-ident="$KEY.pub" --noprompt >/dev/null)
     fi
-    "$SRC/image/witness-image.sh" "$IMAGE" >/dev/null
+    # release signing key: stays on the build host; its public half goes into the IFS
+    [ -f "$RELEASE_KEY" ] || "${WITNESS[@]}" release-key "$RELEASE_KEY" >/dev/null
+    WITNESS_RELEASE_PUB="$RELEASE_KEY.pub" "$SRC/image/witness-image.sh" "$IMAGE" >/dev/null
     (cd "$IMAGE" && mkqnximage --build >"$WORK/build.log" 2>&1) || { tail "$WORK/build.log"; exit 1; }
-    say "computing reference values from the build output"
-    "${WITNESS[@]}" reference "$IMAGE" -o "$WORK/reference.json"
+    say "computing reference values from the build output and signing the release"
+    "${WITNESS[@]}" reference "$IMAGE" -o "$WORK/reference.json" --release-key "$RELEASE_KEY"
     ;;
 up)
     (cd "$IMAGE" && SSH_PORT=$SSH_PORT "$SRC/scripts/vm.sh" start)
     say "waiting for witnessd"
     wait_for_agent
+    push_release_policy
     grep -a -E 'Witness|witnessd' "$IMAGE/output/console.log" | tr -d '\r' || true
     ;;
 enroll)

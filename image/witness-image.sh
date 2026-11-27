@@ -31,6 +31,10 @@ cat > "$SNIPPETS/ifs_files.witness" <<EOF
 [perms=0555] witness-measure=$BUILD/witness-measure
 [perms=0444] witness-apps.manifest=$HERE/witness-apps.manifest
 EOF
+# release public key: the device key then follows signed releases (PolicyAuthorize) instead of one PCR state
+if [ -n "${WITNESS_RELEASE_PUB:-}" ]; then
+    echo "[perms=0444] witness-release.pub=$WITNESS_RELEASE_PUB" >> "$SNIPPETS/ifs_files.witness"
+fi
 
 # 3. IFS script: start the driver before anything from the (not yet measured) system partition runs
 cat > "$SNIPPETS/ifs_start.witness" <<'EOF'
