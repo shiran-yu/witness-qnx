@@ -39,6 +39,44 @@ through the standard TPM TIS interface, the same register interface a discrete T
  host: witness verify ────────────┘  signature, nonce, PCRs, event-log replay, per-file findings
 ```
 
+## Why this matters
+
+QNX runs in more than 275 million vehicles ([QNX, 16 Dec 2025](https://www.newswire.com/news/qnx-embedded-technology-now-powering-more-than-275-million-vehicles-on-the-road))
+and in medical devices, industrial controls and robots. In each of these markets, regulation now
+asks the manufacturer to know and prove what software a device in the field is running:
+
+| Market | Requirement | In force |
+|---|---|---|
+| Vehicles (EU, UNECE) | UN R156: the manufacturer "can verify that the software version(s) present on a component of a type approved system are consistent with those defined by the relevant RXSWIN" (7.1.1.4); UN R155: "detect and prevent cyber-attacks" and "provide data forensic capability" (7.3.7) | R155 all new EU vehicles since 7 Jul 2024; R156 all new vehicles from 7 Jul 2026 ([EU 2019/2144](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02019R2144-20240707), [EU 2022/2236](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32022R2236), [R156 text](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:42021X0388)) |
+| Any product with digital elements sold in the EU | Cyber Resilience Act, Annex I (2)(f): "protect the integrity of stored ... programs and configuration against any manipulation or modification ... and report on corruptions"; fines up to EUR 15 million or 2.5 % of turnover (Art. 64) | reporting from 11 Sep 2026, all obligations from 11 Dec 2027 ([Regulation (EU) 2024/2847](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=OJ:L_202402847)) |
+| Medical devices (US) | FD&C Act §524B for cyber devices; FDA guidance: "Ensure that the authenticity of software, firmware, and configuration are validated prior to execution", "Hardware-based security solutions should be considered", anti-replay "with the use of cryptographic nonces" | since 29 Mar 2023; guidance of 3 Feb 2026 ([FDA](https://www.fda.gov/media/119933/download)) |
+| Industrial automation | IEC 62443-4-2 CR 3.14, integrity of the boot process: verify "the integrity of the firmware, software, and configuration data needed for the component's boot and runtime processes prior to use" (wording as given by [ISASecure](https://isasecure.org/hubfs/Webinars/Webinars%20PDFs/2019-August-8-Webinar.pdf)) | certification requirement |
+
+The failures are real: a backdoor in the Contec CMS8000 patient monitor allowed "device modification"
+([CISA, Feb 2025](https://www.cisa.gov/resources-tools/resources/contec-cms8000-contains-backdoor));
+attackers compromised at least 75 Unitronics PLCs, 34 of them in US water and wastewater systems
+([CISA AA23-335A](https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-335a)).
+
+Witness maps onto these requirements directly: the release defines the expected measurement of every
+file (the role of RXSWIN integrity data), the device proves its boot state with a TPM signature over
+a fresh nonce, a change is reported by file name, and a device that is not in the released state
+loses the key it would use to talk to its fleet service.
+
+**Why QNX is the right foundation.** Attestation must never cost a control loop its deadline, and it
+must not become a new way into the device. QNX's architecture gives both, and Witness uses it:
+
+- *Isolation by process, not by trust.* The TPM driver, the TPM resource manager (`tabrm`) and the
+  agent are separate user-space processes behind QNX message passing. A fault or compromise in the
+  network-facing agent does not reach the driver or the kernel.
+- *Least privilege enforced by the kernel.* The QNX security policy gives each process only what it
+  needs: the driver gets its one 4 KiB register page and its interrupt; only the measurement tool and
+  `tabrm` may reach the driver; only the agent may reach `tabrm`; a root login gets none of these.
+- *Priority-ordered service.* A QNX server receives messages in priority order and runs at its
+  client's priority. The driver is single-threaded, so TPM work requested by low-priority
+  attestation runs at that low priority and is never queued ahead of more urgent work.
+- *Measure before use.* The driver and the measurement tool live in the boot image, which the
+  firmware measures, and run before anything on the system partition, from QNX's own boot script.
+
 ## Build and run
 
 | | Tested with |
