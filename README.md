@@ -336,7 +336,8 @@ QNX through `dev-tpm-tis`, and predict the same value on the host from `ifs.bin`
 ## AI tools used
 
 Claude Code (Anthropic) wrote most of the code, scripts and documentation under the author's
-direction; every result shown above was produced by running it on QNX 8.0 under QEMU.
+direction; every result shown above was produced by running it on QNX 8.0 under QEMU. The demo
+video's narration is the author's own voice, synthesised with an AI voice model.
 
 ## Licence
 
