@@ -19,7 +19,7 @@ Path=1 - Intel 82371SB
  target=0 lun=0            CD-ROM(5) - QEMU     QEMU DVD-ROM     Rev: 2.5+
 ---> Mounting file systems
 ---> Mounting file systems
----> Witness: measuring system partition into PCR 8
+---> Witness: measuring system partition and boot configuration into PCR 8
 ---> Starting Networking
 ---> Starting sshd
 ---> Starting misc

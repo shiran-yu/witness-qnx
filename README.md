@@ -9,8 +9,9 @@ signature from the TPM, three questions:
 
 1. **Is this the image we released?** UEFI firmware measures the QNX IFS (boot image) into PCR 4.
 2. **Are the system files the released ones?** Witness measures every file and symlink on the system
-   partition (241 on the demo image) into PCR 8 right after it is mounted, before anything on it runs,
-   and the applications into PCR 9 before launch. The verifier predicts all of them from the build
+   partition and in `/etc` (`/data/var/etc`, the boot configuration; 252 on the demo image) into PCR 8
+   right after they are mounted, before any boot script reads them, and the applications into PCR 9
+   before launch. The verifier predicts all of them from the build
    output.
 3. **If not, what changed?** The verifier replays the event log and names the file:
    `CHANGED PCR 8 /system/etc/ssh/sshd_config`.
@@ -19,8 +20,10 @@ Each device also holds a **device key**, created inside its TPM, that the TPM le
 0, 2, 4, 5, 7, 8 and 9 (firmware, boot image, disk, system partition, applications) equal the released
 state. The key signs every attestation request, and the verifier checks that its TPM policy is
 exactly the released state, computed from the build, so a tampered device loses its own credential
-and cannot fake having it. A QNX security policy confines the TPM: even `root` logged in over ssh
-cannot open `/dev/tpm0` or take the agent's type, so it cannot extend PCRs or use either key.
+and cannot fake having it. A QNX security policy confines the TPM: once the device has booted, even
+`root` logged in over ssh cannot open `/dev/tpm0` or take the agent's type, so it cannot extend PCRs
+or use either key. The boot script itself can (it starts those components), so everything it reads
+is measured first.
 
 Everything below runs on QNX 8.0 under QEMU (x86_64, UEFI) with a software TPM (swtpm) attached
 through the standard TPM TIS interface, the same register interface a discrete TPM chip exposes.
@@ -30,7 +33,7 @@ through the standard TPM TIS interface, the same register interface a discrete T
  │
  ├─ OVMF measures BOOTx64.EFI (= QNX IFS) ............................ PCR 4
  ├─ IFS script: dev-tpm-tis  → /dev/tpm0, /dev/tpm0-stats   (resource manager, type tpm_driver_t)
- ├─ startup.sh: witness-measure → system partition, after mount ...... PCR 8
+ ├─ startup.sh: witness-measure → /system and /etc, after mount ...... PCR 8
  ├─ post_start: witness-measure → applications, before launch ........ PCR 9
  └─ witnessd (QNX tss2 ESYS → libtss2-tcti-witness → /dev/tpm0), supervised:
         AK, quote PCR 0-9, PCR-bound device key certified by the AK, TCP 7650
@@ -77,7 +80,8 @@ must not become a new way into the device. QNX's architecture gives both, and Wi
   attestation at 8 too: it never preempts normal-priority work. This is the design; we have not
   measured control-loop latency under attestation load on real hardware (QEMU on WSL2 is too noisy).
 - *Measure before use.* The driver and the measurement tool live in the boot image, which the
-  firmware measures, and run before anything on the system partition, from QNX's own boot script.
+  firmware measures, and run from QNX's own boot script before it reads anything on the system
+  partition or in `/etc` (where `start_net.sh` sources `settings/network` as shell code).
 
 ## Build and run
 
@@ -106,7 +110,8 @@ demo/demo.sh down
 
 ### What you should see
 
-A complete recorded run (build, boot, enroll, attack, three tampers, restores) is in
+(253 measurements: 252 files and symlinks plus the end-of-measurement marker.) A complete recorded
+run (build, boot, enroll, attack, four tampers, restores) is in
 [docs/evidence/golden-path.log](docs/evidence/golden-path.log), with the QNX boot console in
 [docs/evidence/qnx-console-last-boot.log](docs/evidence/qnx-console-last-boot.log).
 
@@ -121,7 +126,7 @@ A complete recorded run (build, boot, enroll, attack, three tampers, restores) i
   pass  boot image (PCR 4)           IFS is the released ifs.bin (Authenticode, measured by UEFI firmware)
   pass  event log (PCR 8)            log replays to the quoted PCR
   pass  event log (PCR 9)            log replays to the quoted PCR
-  pass  system partition (PCR 8)     241 measurement(s) match the release
+  pass  system and /etc (PCR 8)      253 measurement(s) match the release
   pass  applications (PCR 9)         1 measurement(s) match the release
   pass  device key (PCR 0,2,4,5,7,8,9) TPM released the key bound to the released boot state; it signed our nonce
 ```
@@ -141,7 +146,7 @@ After `tamper config` and a reboot:
 
 ```
 127.0.0.1:10023  NOT TRUSTED   device key: locked (reported by agent)
-  FAIL  system partition (PCR 8)     1 difference(s) from the release
+  FAIL  system and /etc (PCR 8)      1 difference(s) from the release
   FAIL  device key (PCR 0,2,4,5,7,8,9) TPM refused to release the device key: tpm:session(1):a policy check failed
        CHANGED  PCR 8  /system/etc/ssh/sshd_config
                   expected 4e2e95dc5d0f3652…  got 294c7dd0399bfc3a…
@@ -149,7 +154,9 @@ After `tamper config` and a reboot:
 
 After `tamper lib` (a modified `libtss2-rc.so.1`, loaded by `witnessd`):
 `CHANGED PCR 8 /system/lib/libtss2-rc.so.1`, device key locked. After `tamper app` (the attestation
-agent binary replaced): `/system/bin/witnessd` changed in PCR 8 and in PCR 9.
+agent binary replaced): `/system/bin/witnessd` changed in PCR 8 and in PCR 9. After `tamper data` (a
+command appended to `/etc/settings/network`, which `start_net.sh` runs as root at boot):
+`CHANGED PCR 8 /data/var/etc/settings/network`, device key locked.
 
 ### Fleet dashboard
 
@@ -221,8 +228,9 @@ driver chose (`interrupt driven` after its interrupt self-test, or polling):
 - Measurement happens at boot. A file changed while the device runs is reported after the next
   boot, not before (the demo reboots after each tamper for that reason). File contents and symlink
   targets are measured; owners, modes and setuid bits are not.
-- PCR 8 covers the system partition (`/system`); the writable data partition (`/data`, e.g.
-  `authorized_keys`, logs) is not measured.
+- PCR 8 covers the system partition (`/system`) and `/etc` (`/data/var/etc`). The rest of the
+  writable data partition (`/data`, e.g. `authorized_keys`, ssh host keys, logs) is not measured;
+  the stock boot script reads nothing else there as code.
 - The device key is bound to one release. A new release or firmware update needs re-provisioning
   and re-enrollment; `TPM2_PolicyAuthorize` with a signed release policy is the production route
   and is not implemented.
