@@ -93,7 +93,7 @@ must not become a new way into the device. QNX's architecture gives both, and Wi
 
 ```bash
 source ~/qnx800/qnxsdp-env.sh            # QNX SDP 8.0 environment
-cd witness                               # this repository
+git clone https://github.com/shiran-yu/witness-qnx witness && cd witness
 demo/demo.sh build      # cross-build for QNX 8.0, create the UEFI image with the Witness layer, compute reference values
 demo/demo.sh up         # boot it headless with swtpm on the TIS interface
 demo/demo.sh enroll     # record the attestation key and firmware baseline (known-good boot)

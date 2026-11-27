@@ -39,13 +39,27 @@ cat > "$SNIPPETS/ifs_start.witness" <<'EOF'
     waitfor /dev/tpm0 5
 EOF
 
-# 4. startup.sh right after the file systems are mounted: measure before use
+# 4a. before devb: the stock mount_fs.sh runs /boot/onboot (unmeasured EFI partition) and
+# /system/bin/cleanup_tmp before anything is measured. It exits early when /system and /data
+# exist, so placeholders make it a no-op and 4b mounts the partitions itself.
+cat > "$SNIPPETS/startup_postpci.witness" <<'EOF'
+ln -sP /dev/null /system
+ln -sP /dev/null /data
+EOF
+
+# 4b. replaces mount_fs.sh: mount, measure before use, then run what mount_fs.sh would have run
 cat > "$SNIPPETS/startup_postfs.witness" <<'EOF'
+rm /system /data
+mount -t qnx6 -o noatime /dev/hd0.qnx6.1 /system
+mount -t qnx6 /dev/hd0.qnx6.2 /data
 echo "---> Witness: measuring system partition and boot configuration into PCR 8"
 START_P(witness_measure_t) /proc/boot/witness-measure -p 8 -r /system
 # /etc is /data/var/etc: start_net.sh sources settings/network as shell code, sshd reads passwd/shadow
 START_P(witness_measure_t) /proc/boot/witness-measure -p 8 -r /data/var/etc
 START_P(witness_measure_t) /proc/boot/witness-measure -p 8 -t marker -s "witness:system-measured"
+# EFI partition read-only, and no onboot hook: nothing on it runs
+mount -t dos -r /dev/hd0.efi.0 /boot
+/system/bin/cleanup_tmp
 EOF
 
 # 5. system partition: QNX TCG stack + Witness user space

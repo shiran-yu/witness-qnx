@@ -41,7 +41,7 @@ The TPM driver `dev-tpm-tis` is a QNX resource manager: it maps the TPM's TIS re
 reads one response.
 
 ```bash
-git clone <witness repository URL> witness && cd witness
+git clone https://github.com/shiran-yu/witness-qnx witness && cd witness
 source ~/qnx800/qnxsdp-env.sh
 make                      # qcc -Vgcc_ntox86_64: build/x86_64/dev-tpm-tis, tpm-raw, ...
 ```
@@ -79,7 +79,7 @@ Put the driver and `tpm-raw` into the IFS and start the driver from the IFS boot
 system partition is mounted:
 
 ```bash
-W=<path to witness>/build/x86_64
+W=~/witness/build/x86_64   # where you cloned it
 cat > local/snippets/ifs_files.tpm <<EOF
 [perms=0555] dev-tpm-tis=$W/dev-tpm-tis
 [perms=0555] tpm-raw=$W/tpm-raw
@@ -152,7 +152,7 @@ Each extend is `PCR = SHA256(PCR || digest)`, starting from 32 zero bytes. The W
 package has the Authenticode hash (`witness/pe.py`); the rest is five lines:
 
 ```bash
-cd <path to witness>/host
+cd ~/witness/host
 uv run python - ~/tpm-lab/vm/output/ifs.bin <<'EOF'
 import hashlib, sys
 from witness.pe import authenticode_digest
