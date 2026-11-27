@@ -116,6 +116,10 @@ qemu-system-x86_64 -enable-kvm -cpu host -m 1G -nographic \
   -netdev user,id=net0,hostfwd=tcp::10022-:22 -device virtio-net-pci,netdev=net0
 ```
 
+If QEMU says "Could not access KVM kernel module: Permission denied", add yourself to the `kvm` group
+and log in again, or drop `-enable-kvm -cpu host` and let QEMU emulate the CPU (slower, but the TPM
+steps work the same).
+
 Keep QEMU's default `pc` machine: on `q35` the `if=ide` disk sits behind an AHCI controller, which
 `devb-eide` does not find, and the system partition is never mounted.
 
