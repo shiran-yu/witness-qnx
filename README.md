@@ -66,6 +66,10 @@ demo/demo.sh down
 
 ### What you should see
 
+A complete recorded run (build, boot, enroll, attack, three tampers, restores) is in
+[docs/evidence/golden-path.log](docs/evidence/golden-path.log), with the QNX boot console in
+[docs/evidence/qnx-console-last-boot.log](docs/evidence/qnx-console-last-boot.log).
+
 ```
 127.0.0.1:10023  TRUSTED   device key: released (proven by TPM signature)
   pass  attestation key              AK 59a38e285aa23b6e
@@ -143,8 +147,9 @@ TPM TIS register interface.
 
 `/dev/tpm0-stats` reports the driver mode, command count, interrupt wake-ups and latency. Under the
 secure policy a root login cannot read it either (same channel as `/dev/tpm0`); build with
-`SECPOL=no demo/demo.sh build` (fresh `.work`) to inspect it. On an unconfined boot it showed 40 TPM
-commands and 40 interrupt wake-ups (interrupt mode, IRQ 5).
+`SECPOL=no demo/demo.sh build` (fresh `.work`) to inspect it. The boot console shows which mode the
+driver chose (`interrupt driven` after its interrupt self-test, or polling):
+[docs/evidence/qnx-console-last-boot.log](docs/evidence/qnx-console-last-boot.log).
 
 ## How the verifier decides
 
