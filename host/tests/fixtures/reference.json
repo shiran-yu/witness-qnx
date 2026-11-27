@@ -1,9 +1,9 @@
 {
  "version": 2,
- "created": "2026-11-27T03:49:58+00:00",
+ "created": "2026-11-27T05:04:33+00:00",
  "image": "vm",
  "boot_mode": "uefi",
- "ifs_sha256": "29cb2a48ac5a427b9074e676d14b56704d87a3cb372dca5382d700a456fb80cf",
+ "ifs_sha256": "86478a31f9c457f479427a067449884f2789fcce260d6a8cc11dbf061763bc0e",
  "events": {
   "8": [
    {
@@ -879,7 +879,7 @@
    {
     "type": "file",
     "path": "/system/etc/build.date",
-    "sha256": "7abf158456f0c7d6d6a2d155733e23747db4cc381b7c929c5d8f7531dabf8a47"
+    "sha256": "3d517332de43c01056e81b295c825b6bba984ac344aa194b6e05e01e1229ee3b"
    },
    {
     "type": "file",
@@ -1209,7 +1209,7 @@
    {
     "type": "file",
     "path": "/data/var/etc/build.date",
-    "sha256": "7abf158456f0c7d6d6a2d155733e23747db4cc381b7c929c5d8f7531dabf8a47"
+    "sha256": "3d517332de43c01056e81b295c825b6bba984ac344aa194b6e05e01e1229ee3b"
    },
    {
     "type": "file",
@@ -1281,13 +1281,13 @@
   ]
  },
  "pcr": {
-  "8": "71e1d2b5f283d24ac5ebeb6cb9a42350c1853bb7658fcea28f37a2665c1b3690",
+  "8": "127defac2c8b88904b124a51c6b7f81b32616ff12f8fb038d382ddbf188a044c",
   "9": "a73ab2d338b89db6e7f5659bc249de80031dc34efdc9681f46660c2899d287a6",
-  "4": "bef0a3dbc5b4c65a2e7939ac50d8a3e47a0dca4a5b9647ec1c8ed539fae95d31",
-  "5": "67235c013c085138593402687c6450958a084d49c4db3f10bf47fbdde3e233b4"
+  "4": "c2a443ca11d8474392c505a487a49336958cd98a0085014e22f7e1ff84c06c19",
+  "5": "26aea97b30d17309be594380fa85a40da97de400362e9191d13762cd4c857e83"
  },
  "files": {
-  "/system/etc/build.date": "7abf158456f0c7d6d6a2d155733e23747db4cc381b7c929c5d8f7531dabf8a47",
+  "/system/etc/build.date": "3d517332de43c01056e81b295c825b6bba984ac344aa194b6e05e01e1229ee3b",
   "/system/etc/profile": "61f2a9b1d5a4a75dcf262baaa69a4c8e747bd23827e138882d82682411068662",
   "/system/bin/start_net.sh": "abe38f049ea2bd08193ea3d25f40238ffa4852b917e76bedb2764aa430c516cc",
   "/system/etc/startup/post_startup.sh": "abdec35190cb51c3250eeee4aaeff236c9d05f3476d734dc6499711d0e302527",
@@ -1529,7 +1529,7 @@
   "/system/bin/zcat": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
   "/data/var/etc/resolv.conf": "83ec642cfe4e6b0a3af6c2cdf73059efa82942f8721bc4ef78880391e7799e98",
   "/data/var/etc/profile": "f2a14885f8f94772c9339ca53f6ecb3742f2a36d2275fbd1b8f35892cd102653",
-  "/data/var/etc/build.date": "7abf158456f0c7d6d6a2d155733e23747db4cc381b7c929c5d8f7531dabf8a47",
+  "/data/var/etc/build.date": "3d517332de43c01056e81b295c825b6bba984ac344aa194b6e05e01e1229ee3b",
   "/data/var/etc/passwd": "ed7ede1ed9261c7960d9d9f5ea2ea42c4b2f8a3881a5f263e433d6c88acc3541",
   "/data/var/etc/shadow": "ad104356ca871e4a47de5fa8a22fb951bebfa5979de0f2a3757273d0de5ec82a",
   "/data/var/etc/group": "f9bdd5a011cc8b3f5b1741e80b7784ce5666caaeb70639a5adbedf632f4bc507",
@@ -1540,6 +1540,6 @@
   "/data/var/etc/services": "0b208005b8da16346b4896d2d2ea10cdb5f81254ee7e2171c3a362689e09adac",
   "/data/var/etc/system/config/pci/pcidatabase.com-tab_delimited.txt": "92489d66dbf86103a56a08108fe360ae308de48b542e696f5f20cfabb6108464"
  },
- "ifs_authenticode": "84dbda8a9363f10f1745b2bbd4446180096c652633a3a3b31957c7fff9a86044",
- "gpt_event": "18fc8deb92d02bf5d3e6143ae42f437ddb38afb89c68f751b357845ebe67a10f"
+ "ifs_authenticode": "310e5ca48e061efff7d948ebfbc5a9e11e034f72df39a726a5598b1ae97c5bf2",
+ "gpt_event": "aa252eb61c3adc04d31bcb1763a4af1c0e02f079155271d464ad4e4cb523f625"
 }

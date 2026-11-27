@@ -187,6 +187,19 @@ devices, none for TPMs; for other devices its guide says to "follow the _Writing
 documentation to create your own resource manager". `dev-tpm-tis` is that resource manager, for the
 TPM TIS register interface.
 
+**Why a resource manager, not QNX's TPM driver base.** The SDP's `security.tcg.tpm.driver.base`
+package ships `tcti_tpm_driver_base.so`, a TCTI that `dlopen`s a board vendor's hardware module
+(`tpm_mod.so`, per `etc/sample_tcti_tpm_driver_base.cfg`); no hardware module comes with the SDP.
+That design runs the hardware access inside every TPM client process, so each client would need the
+TPM's physical memory and interrupt. As a resource manager, only `dev-tpm-tis` holds them; clients
+reach it over a QNX channel that the security policy grants per type (only the measurement tool and
+the agent), and the kernel serialises their commands in priority order. A `tpm_mod.so` built on the
+same TIS code would let QNX's driver base use a TIS TPM too; we have not built one.
+
+**QTD.** QNX Trusted Disk checks `/system` blocks against a signed hash tree as they are read, on the
+device. Witness is the remote half: a verifier off the device learns what booted and can refuse it a
+credential. Witness's mount step handles the qnx6 image this demo uses, not QTD or qcfs partitions.
+
 | Component | File | QNX 8.0 facilities used |
 |---|---|---|
 | TPM TIS driver | [driver/tis.c](driver/tis.c) `tis_open`, `wait_sts`, `tis_transmit` | `mmap_device_memory` (TIS registers at 0xFED40000, `PROT_NOCACHE`); `InterruptAttachThread` + `InterruptWait` with `_NTO_INTR_WAIT_FLAGS_UNMASK`, bounded by `TimerTimeout(_NTO_TIMEOUT_INTR)`; polling fallback if the interrupt self-test gets no wake-up |
