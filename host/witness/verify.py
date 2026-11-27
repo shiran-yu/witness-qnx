@@ -71,7 +71,7 @@ def appraise(attestation: dict, nonce: bytes, reference: dict, enrollment: dict 
     pcrs = {int(k): bytes.fromhex(v) for k, v in attestation["pcrs"].items()}
     quoted = quote.selection.get(TPM_ALG_SHA256, [])
     digest = hashlib.sha256(b"".join(pcrs[i] for i in quoted)).digest() if all(i in pcrs for i in quoted) else b""
-    consistent = digest == quote.pcr_digest
+    consistent = digest == quote.pcr_digest and set(range(10)) <= set(quoted)  # the quote must sign PCR 0-9
     add(Check("PCR values", consistent, f"PCR {quoted[0]}-{quoted[-1]} match the signed digest" if consistent
               else "reported PCRs do not match the quote"))
     if not consistent:
