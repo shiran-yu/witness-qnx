@@ -1,0 +1,20 @@
+# Host side on a clean GitHub runner: the verifier's tests (including the offline fleet replay), then the
+# captured TPM evidence checked by tpm2-tools, an implementation Witness did not write.
+# The QNX side needs the licensed QNX SDP, so it is not built here (see docs/evidence/ for those runs).
+name: ci
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  host:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Verifier tests
+        run: cd host && uv run --group dev pytest -q
+      - name: Fleet replay (the README's first screen, offline)
+        run: cd host && uv run python -c "from witness.dashboard import replay_fleet; f = replay_fleet('tests/fixtures/fleet', None, 10, None); [f.verify(d) for d in f.devices.values()]; [print(d['name'], d['state'], [x['title'] for x in d['findings']]) for d in f.overview()['devices']]"
+      - name: Independent check with tpm2-tools
+        run: sudo apt-get install -y tpm2-tools && scripts/independent-check.sh

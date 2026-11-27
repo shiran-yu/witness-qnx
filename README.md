@@ -7,7 +7,8 @@
 > ([Build and run](#build-and-run)). **Where to look:** category Low-level Software, a TPM driver as a QNX
 > resource manager ([Evidence of QNX use](#evidence-of-qnx-use)) · QNX-specific technologies, one row per
 > technology ([QNX-specific technologies](#qnx-specific-technologies)) · codelab
-> ([docs/codelab](docs/codelab/qnx-tpm-measured-boot-qemu.md)).
+> ([docs/codelab](docs/codelab/qnx-tpm-measured-boot-qemu.md), submitted upstream as
+> [qnx/codelabs#87](https://github.com/qnx/codelabs/pull/87)).
 
 ![Fleet dashboard: three QNX 8.0 devices on QEMU, each with its own TPM. gateway-a is trusted and its
 device key is released; gateway-b was rolled back to release 1 and gateway-c runs a changed TPM library,
@@ -111,9 +112,10 @@ must not become a new way into the device. QNX's architecture gives both, and Wi
   client's priority. witnessd runs at priority 8, below QNX's default 10, so the TPM driver serves
   attestation at 8 too, and the scheduler does not let it preempt work at QNX's default priority or above. Measured under QEMU
   ([demo/latency.sh](demo/latency.sh), [docs/evidence/latency.log](docs/evidence/latency.log)): a
-  1 kHz loop at priority 10 while the host floods witnessd (~22 attestations/s) had 0, 1 and 2
-  periods over 1 ms late in three 30 s runs, as many as idle (2, 38, 1); the same loop at priority 7,
-  below witnessd, had 8, 5 and 6108. QEMU on a laptop, not hardware timings: the rows compare.
+  1 kHz loop at priority 10 while the host floods witnessd (~21 attestations/s) had 1, 4, 0 and 5
+  periods over 1 ms late in four 30 s runs, about as many as idle (3, 1, 3, 2); the same loop at
+  priority 7, below witnessd, had 10, 4, 39 and 73. Two more runs, on a busy host where even the idle
+  rows degrade, are in the log. QEMU (KVM) on a laptop, not hardware timings: the rows compare.
 - *Measure before use.* The driver and the measurement tool live in the boot image, which the
   firmware measures, and run from QNX's own boot script before it reads anything on the system
   partition or in `/etc` (where `start_net.sh` sources `settings/network` as shell code). The stock
@@ -307,7 +309,7 @@ partitioning, pulses of its own, qvm or QTD.
 | QNX 8.0 interrupt model | `InterruptAttachThread` + `InterruptWait`, bounded with `TimerTimeout(_NTO_TIMEOUT_INTR)`; an interrupt self-test falls back to polling | [driver/tis.c](driver/tis.c); boot console line `interrupt driven` |
 | Startup and boot customisation | `mkqnximage` snippets start the driver in the IFS script and measure `/system` and `/etc` right after mount, before any boot script reads them; the IFS load address is moved so current OVMF loads it | [image/witness-image.sh](image/witness-image.sh), [image/uefi/definitions.zz_witness](image/uefi/definitions.zz_witness) |
 | Security policies | Each component runs under its own secpol type; only the measurement tool and the agent may connect to the driver, and only the report app (`witness_report_t`) to the agent's signing channel; root over ssh gets "Operation not permitted" on both | [image/witness.secpol](image/witness.secpol); `demo.sh attack` |
-| Real-time services | The agent runs at priority 8, below QNX's default 10; a 1 kHz `SCHED_FIFO` loop at 10 saw no more late periods during an attestation flood than idle (QEMU, three runs) | [agent/witnessd.c](agent/witnessd.c) `pthread_setschedparam`; [docs/evidence/latency.log](docs/evidence/latency.log) |
+| Real-time services | The agent runs at priority 8, below QNX's default 10; a 1 kHz `SCHED_FIFO` loop at 10 saw about as many late periods during an attestation flood as idle (QEMU with KVM, four quiet-host runs; two busy-host runs in the log) | [agent/witnessd.c](agent/witnessd.c) `pthread_setschedparam`; [docs/evidence/latency.log](docs/evidence/latency.log) |
 | QNX's TCG software stack | The agent uses the SDP's `libtss2-esys`/`-mu`/`-rc`; Witness adds the TCTI module the SDP does not ship | [tcti/tcti-witness.c](tcti/tcti-witness.c) |
 
 ## How the verifier decides
@@ -380,7 +382,8 @@ partitioning, pulses of its own, qvm or QTD.
 
 [Measured boot on QNX 8.0: give your QEMU target a TPM](docs/codelab/qnx-tpm-measured-boot-qemu.md)
 teaches the first link on its own: boot QNX 8.0 through UEFI with a software TPM, read PCR 4 from
-QNX through `dev-tpm-tis`, and predict the same value on the host from `ifs.bin`.
+QNX through `dev-tpm-tis`, and predict the same value on the host from `ifs.bin`. Submitted upstream to
+QNX's codelab collection: [qnx/codelabs#87](https://github.com/qnx/codelabs/pull/87).
 
 ## AI tools used
 
