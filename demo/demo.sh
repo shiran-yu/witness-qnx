@@ -196,16 +196,20 @@ attack)
                           "echo touch /tmp/pwned > /boot/onboot"; do
                      echo "# $c"; sh -c "$c" 2>&1 && echo "  ALLOWED" || echo "  denied"; done'
     # root may write /system/lib and signal the agent: swap the TPM library, kill the agent, see what its supervisor restarts
-    "${SSH[@]}" 'l=/system/lib/libtss2-tcti-witness.so.0; cp $l /data/var/witness/tcti.orig;
+    # (a library the agent maps; writing it in place is refused while mapped, so rename over it)
+    "${SSH[@]}" 'l=/system/lib/libtss2-esys.so.1; cp $l /data/var/witness/esys.orig;
                  echo "# swap $l, then kill the agent so its supervisor restarts it";
                  cp $l $l.new && echo "# patched" >> $l.new && mv $l.new $l;
                  maps() { pidin -p $1 mem | grep -o "[^ /]*\.so[.0-9]*" | sort -u; };
-                 s=$(pidin -f aN | grep witnessd | awk "{print \$1}" | sort -n | head -1);
-                 kill $(pidin -f aN | grep witnessd | awk "{print \$1}" | sort -n | tail -1); sleep 8;
-                 a=$(pidin -f aN | grep witnessd | awk "{print \$1}" | sort -n | tail -1);
-                 if [ "$(maps $a)" != "$(maps $s)" ]; then echo "  ALLOWED: restarted agent $a maps objects its supervisor does not";
-                 else echo "  no effect: restarted agent $a maps exactly what its supervisor loaded at the measured launch"; fi;
-                 cp /data/var/witness/tcti.orig $l.new && mv $l.new $l && rm /data/var/witness/tcti.orig'
+                 pids() { pidin -f aN | grep witnessd | awk "{print \$1}" | sort -n; };
+                 s=$(pids | head -1); old=$(pids | tail -1); kill $old; a=$old;
+                 for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+                     a=$(pids | tail -1); [ -n "$a" ] && [ "$a" != "$old" ] && [ "$a" != "$s" ] && break; sleep 1; done;
+                 pp=$(pidin -f ae | awk -v p=$a "\$1 == p {print \$2}");
+                 if [ "$a" = "$old" ] || [ "$a" = "$s" ]; then echo "  agent not restarted";
+                 elif [ "$pp" != "$s" ] || [ "$(maps $a)" != "$(maps $s)" ]; then echo "  ALLOWED: restarted agent $a is not a plain fork of its supervisor";
+                 else echo "  no effect: restarted agent $a is a fork of supervisor $s (no exec), mapping the same $(maps $s | wc -l | tr -d " ") objects it loaded at the measured launch"; fi;
+                 cp /data/var/witness/esys.orig $l.new && mv $l.new $l && rm /data/var/witness/esys.orig'
     ;;
 down)
     "${SSH[@]}" 'shutdown' >/dev/null 2>&1 || true

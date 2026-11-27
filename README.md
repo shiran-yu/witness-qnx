@@ -177,13 +177,14 @@ on: Operation not permitted (/system/bin/witnessd)
 on: Operation not permitted (/proc/boot/witness-measure)
 # echo touch /tmp/pwned > /boot/onboot                 (a boot hook; it would not be run anyway)
 sh: cannot create /boot/onboot: Read-only file system
-# swap /system/lib/libtss2-tcti-witness.so.0, then kill the agent so its supervisor restarts it
-  no effect: restarted agent 905237 runs the code measured at boot (the TCTI is linked in)
+# swap /system/lib/libtss2-esys.so.1, then kill the agent so its supervisor restarts it
+  no effect: restarted agent 1212438 is a fork of supervisor 454676 (no exec), mapping the same 12 objects it loaded at the measured launch
 ```
 
 Root can write `/system` and signal the agent, so the last check matters: the supervisor restarts the agent
-with `fork`, and the agent loads no library after its measured launch (the TCTI is linked into
-`witnessd`), so a swapped library cannot run under the agent's type until a reboot measures it.
+with `fork`, never `exec`, and the agent loads no library after its measured launch (the TCTI is linked
+into `witnessd`, OpenSSL is initialised before the first fork), so a swapped library (here one the agent
+maps) cannot run under the agent's type until a reboot measures it.
 Killing the supervisor stops attestation (denial of service; the verifier then reports the device
 unreachable, not trusted).
 

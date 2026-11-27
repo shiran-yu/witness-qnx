@@ -915,7 +915,7 @@ int main(int argc, char **argv)
     signal(SIGPIPE, SIG_IGN);
     signal(SIGALRM, watchdog_expired);
     /* OpenSSL (under ESYS) initialised once, before any fork and without openssl.cnf: a restarted agent inherits
-     * it and never reads a config file or provider module root may have changed since the measured boot */
+     * it and reads no config file or provider module later. Defence in depth: OPENSSLDIR is on the read-only IFS. */
     if (!OPENSSL_init_crypto(OPENSSL_INIT_NO_LOAD_CONFIG | OPENSSL_INIT_ADD_ALL_DIGESTS, NULL))
         fprintf(stderr, "witnessd: OpenSSL initialisation failed\n");
     if (!foreground && fork() > 0)
