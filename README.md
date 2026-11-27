@@ -1,5 +1,14 @@
 # Witness: measured boot and remote attestation for QNX 8.0
 
+> **For** operators and manufacturers of QNX devices in the field (vehicle gateways, robot controllers,
+> medical and industrial devices) who must show that each device runs the software they released.
+> **Try it without QNX:** `cd host && uv run witness dashboard --replay tests/fixtures` (captured TPM
+> evidence, verified offline). **On QNX 8.0 + QEMU:** `demo/demo.sh build up enroll verify`
+> ([Build and run](#build-and-run)). **Where to look:** category Low-level Software, a TPM driver as a QNX
+> resource manager ([Evidence of QNX use](#evidence-of-qnx-use)) · QNX-specific technologies, one row per
+> technology ([QNX-specific technologies](#qnx-specific-technologies)) · codelab
+> ([docs/codelab](docs/codelab/qnx-tpm-measured-boot-qemu.md)).
+
 A fleet operator cannot see what a QNX device in the field actually booted. A changed binary or a
 changed config file on a gateway, a robot controller or an infusion pump looks the same from the
 outside until it misbehaves.
@@ -260,6 +269,22 @@ secure policy a root login cannot read it either (same channel as `/dev/tpm0`); 
 `SECPOL=no demo/demo.sh build` (fresh `.work`) to inspect it. The boot console shows which mode the
 driver chose (`interrupt driven` after its interrupt self-test, or polling):
 [docs/evidence/qnx-console-last-boot.log](docs/evidence/qnx-console-last-boot.log).
+
+## QNX-specific technologies
+
+One row per capability the QNX platform offers and Witness depends on. Witness does not use adaptive
+partitioning, pulses of its own, qvm or QTD.
+
+| QNX capability | What Witness does with it | Evidence |
+|---|---|---|
+| Resource managers | The TPM driver is a resource manager serving `/dev/tpm0` and `/dev/tpm0-stats`: custom OCB per client, `iofunc_notify` for `select`/`poll` | [driver/main.c](driver/main.c) (`resmgr_attach`, `dispatch_create`) |
+| Native message passing | Every TPM command from the measurement tool and the agent is a QNX message to that one process; the kernel queues the clients in priority order, so no client needs the TPM's memory or interrupt | [driver/main.c](driver/main.c) `io_write`/`io_read`; [tcti/tcti-witness.c](tcti/tcti-witness.c) |
+| Microkernel architecture | Hardware access lives in one user-space process with exactly one 4 KiB register page and one interrupt; the agent is a separate process under a supervisor that restarts it | [driver/tis.c](driver/tis.c) `mmap_device_memory`; [agent/witnessd.c](agent/witnessd.c) `main` |
+| QNX 8.0 interrupt model | `InterruptAttachThread` + `InterruptWait`, bounded with `TimerTimeout(_NTO_TIMEOUT_INTR)`; an interrupt self-test falls back to polling | [driver/tis.c](driver/tis.c); boot console line `interrupt driven` |
+| Startup and boot customisation | `mkqnximage` snippets start the driver in the IFS script and measure `/system` and `/etc` right after mount, before any boot script reads them; the IFS load address is moved so current OVMF loads it | [image/witness-image.sh](image/witness-image.sh), [image/uefi/definitions.zz_witness](image/uefi/definitions.zz_witness) |
+| Security policies | Each component runs under its own secpol type; only the measurement tool and the agent may connect to the driver; root over ssh gets "Operation not permitted" | [image/witness.secpol](image/witness.secpol); `demo.sh attack` |
+| Real-time services | The agent runs at priority 8, below QNX's default 10; a 1 kHz `SCHED_FIFO` loop at 10 saw no more late periods during an attestation flood than idle (QEMU, three runs) | [agent/witnessd.c](agent/witnessd.c) `pthread_setschedparam`; [docs/evidence/latency.log](docs/evidence/latency.log) |
+| QNX's TCG software stack | The agent uses the SDP's `libtss2-esys`/`-mu`/`-rc`/`-tctildr`; Witness adds the TCTI module the SDP does not ship | [tcti/tcti-witness.c](tcti/tcti-witness.c) |
 
 ## How the verifier decides
 
