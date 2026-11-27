@@ -325,3 +325,17 @@ def test_key_without_pcr_policy_is_not_bound(good, reference):
     verdict = appraise(attestation, good["nonce"], reference, None, enrolling=True)
     assert failed(verdict) == [DEVICE_KEY]
     assert "not bound" in next(c.detail for c in verdict.checks if c.name == DEVICE_KEY)
+
+
+def test_device_key_needs_ak_certification(good, reference, enrollment):
+    attestation = dict(good["attestation"], device_key=dict(good["attestation"]["device_key"]))
+    del attestation["device_key"]["certify"]
+    assert failed(appraise(attestation, good["nonce"], reference, enrollment)) == [DEVICE_KEY]
+
+
+def test_certification_signed_by_another_key_fails(good, reference, enrollment):
+    attestation = dict(good["attestation"], device_key=dict(good["attestation"]["device_key"]))
+    attestation["device_key"]["certify_signature"] = signature_blob(
+        ec.generate_private_key(ec.SECP256R1()), bytes.fromhex(attestation["device_key"]["certify"])).hex()
+    verdict = appraise(attestation, good["nonce"], reference, enrollment)
+    assert "not certified" in next(c.detail for c in verdict.checks if c.name == DEVICE_KEY)

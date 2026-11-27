@@ -518,7 +518,7 @@ allow witnessd_t self:ability {
     prot_exec
     priority:0-253
     map_fixed
-    channel_connect:slogger_t,devb_t,random_t,io_sock_t,tabrm_t
+    channel_connect:slogger_t,devb_t,random_t,io_sock_t,tpm_driver_t
     network/jailroot
 };
 

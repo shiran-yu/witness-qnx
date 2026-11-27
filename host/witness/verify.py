@@ -12,7 +12,7 @@ Trust chain checked, in order:
 import hashlib
 from dataclasses import dataclass, field
 
-from .tpm import (extend, parse_public, parse_quote, pcr_policy_digest, signature_valid, TPM_ALG_SHA256,
+from .tpm import (extend, parse_certify, parse_public, parse_quote, pcr_policy_digest, signature_valid, TPM_ALG_SHA256,
                   TPMA_OBJECT_FIXEDTPM, TPMA_OBJECT_USERWITHAUTH)
 
 FIRMWARE_PCRS = [0, 1, 2, 3, 5, 6, 7]
@@ -185,10 +185,15 @@ def _check_device_key(verdict: Verdict, attestation: dict, nonce: bytes, referen
         and not key.attributes & TPMA_OBJECT_USERWITHAUTH
     enrolled = not enrollment or enrollment.get("device_key") in (None, device_key["public"])
     signed = signature_valid(key, DEVICE_KEY_LABEL + nonce, bytes.fromhex(device_key["signature"]))
-    ok = bool(bound and enrolled and signed)
+    # TPM2_Certify by the AK: the key with exactly this public area (name) lives in the same TPM
+    certify = bytes.fromhex(device_key.get("certify", ""))
+    certified = bool(certify) and parse_certify(certify) == (nonce, key.name) and signature_valid(
+        parse_public(bytes.fromhex(attestation["ak_public"])), certify, bytes.fromhex(device_key["certify_signature"]))
+    ok = bool(bound and enrolled and signed and certified)
     verdict.checks.append(Check(name, ok, "TPM released the key bound to the released boot state; it signed our nonce"
                                 if ok else "key is not bound to the released state" if not bound
                                 else "key differs from the enrolled one: re-provisioned" if not enrolled
+                                else "key is not certified by this device's attestation key" if not certified
                                 else "signature over our nonce is invalid"))
     verdict.sealed = "unsealed" if ok else "locked"
     verdict.sealed_proven = True

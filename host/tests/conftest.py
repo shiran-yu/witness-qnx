@@ -84,4 +84,7 @@ def forge(attestation: dict, nonce: bytes, key: ec.EllipticCurvePrivateKey, sele
     quote = quote_blob(nonce, forged["pcrs"], list(selected))
     forged.update(ak_public=ak_public_blob(key).hex(), quote=quote.hex(),
                   signature=signature_blob(key, quote).hex())
+    if "certify" in forged.get("device_key", {}):  # the AK also signs the device key certification
+        certify = bytes.fromhex(forged["device_key"]["certify"])
+        forged["device_key"]["certify_signature"] = signature_blob(key, certify).hex()
     return forged

@@ -1,9 +1,9 @@
 {
  "version": 2,
- "created": "2026-11-27T02:13:47+00:00",
+ "created": "2026-11-27T02:42:01+00:00",
  "image": "vm",
  "boot_mode": "uefi",
- "ifs_sha256": "b5e0f5d4378b65128c58900fe3d2275be46ec2cd32217892c409e7f9d41cecf3",
+ "ifs_sha256": "b7268c01ee9390c7dca914d5dfc9761fa980128f69921fbc4a58d2f2769a4ad3",
  "events": {
   "8": [
    {
@@ -698,11 +698,6 @@
    },
    {
     "type": "file",
-    "path": "/system/bin/tabrm",
-    "sha256": "4a94ebfed087e85a7ef5597df29749d838705af73e866501e3609ad12310d72a"
-   },
-   {
-    "type": "file",
     "path": "/system/bin/tail",
     "sha256": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
    },
@@ -755,61 +750,6 @@
     "type": "file",
     "path": "/system/bin/tpm-raw",
     "sha256": "efe0c50b456f6ad93f0bd077450694a87b50a5946ffe6c2e45c0200e3e974d6b"
-   },
-   {
-    "type": "file",
-    "path": "/system/bin/tpm2_createak",
-    "sha256": "e847fe508a41d22fa2463da932c60f7181913f1ba8d1428e2502dab43d0686ba"
-   },
-   {
-    "type": "file",
-    "path": "/system/bin/tpm2_createek",
-    "sha256": "0d3586e550a251442caab90828eb5112e3b42b8ce2525ccfdbcbe75b604a88d3"
-   },
-   {
-    "type": "file",
-    "path": "/system/bin/tpm2_createprimary",
-    "sha256": "4fe3824d6ea7997f94b944592232978248be97b5963ab532b86f3b9e8a91446f"
-   },
-   {
-    "type": "file",
-    "path": "/system/bin/tpm2_flushcontext",
-    "sha256": "6170d5587388fab58aed99d92080c42b90fa350f76576365a95e0dcc700d15b8"
-   },
-   {
-    "type": "file",
-    "path": "/system/bin/tpm2_getcap",
-    "sha256": "d9f076167f8c98916b7d4eb4fb405787c72f3d63e62cc3dbf39703b467071e61"
-   },
-   {
-    "type": "file",
-    "path": "/system/bin/tpm2_getrandom",
-    "sha256": "770fcfdc0024d842f5caa1e03c44bccac820591f2f826ca92dc72eb03b3c66b6"
-   },
-   {
-    "type": "file",
-    "path": "/system/bin/tpm2_pcrextend",
-    "sha256": "f4bd2f636b37ce7e391dd132cfb261725eee065e9be8330f0eaf2099feac257d"
-   },
-   {
-    "type": "file",
-    "path": "/system/bin/tpm2_pcrread",
-    "sha256": "7f5ce2887854d2800cd6ac0617bf5a47e65573be5d428e8685232a6d5c89e59b"
-   },
-   {
-    "type": "file",
-    "path": "/system/bin/tpm2_quote",
-    "sha256": "5f1fba4ef3d847e8f50a01ff9ac00f895bd6f4608af75d285efdb6a10ff59d1c"
-   },
-   {
-    "type": "file",
-    "path": "/system/bin/tpm2_readpublic",
-    "sha256": "4206fccd989d13ff3806f15cdf1dfc465e57f96580e1b519f0a80df6ce7c99d8"
-   },
-   {
-    "type": "file",
-    "path": "/system/bin/tpm2_startup",
-    "sha256": "6200320e8b8b6f9e02b76f2ade4ac8716dbf6c337027eaec7500ac0c78a69d99"
    },
    {
     "type": "file",
@@ -914,7 +854,7 @@
    {
     "type": "file",
     "path": "/system/bin/witnessd",
-    "sha256": "ea3d1576dd96d99904e2006104b18f573e125b3690f97642f9a9defe6879b5b4"
+    "sha256": "f8fe3eb71faa40327779c95b707345d3db08de2831d6058ac84edee96c15d29a"
    },
    {
     "type": "file",
@@ -939,7 +879,7 @@
    {
     "type": "file",
     "path": "/system/etc/build.date",
-    "sha256": "cf83fb5cabac7199854eac785a952354caf14c44401b8c859eff8208a086d0d5"
+    "sha256": "8bbf7a36c41dd0c76b9bdb7a31b95f8b3bde6da49584542a6411237712a3ba61"
    },
    {
     "type": "file",
@@ -1004,17 +944,12 @@
    {
     "type": "file",
     "path": "/system/etc/startup/post_startup.sh",
-    "sha256": "71f82959f3e5878e87548af90159e784a3f3a3a45e4278994ba4a27db765cd49"
+    "sha256": "abdec35190cb51c3250eeee4aaeff236c9d05f3476d734dc6499711d0e302527"
    },
    {
     "type": "file",
     "path": "/system/etc/terminfo/q/qansi",
     "sha256": "56549f6a15910c6ee83b2922aefd8b06bbe24d0c739afb966802d06cf10023b5"
-   },
-   {
-    "type": "file",
-    "path": "/system/etc/witness/tabrm.cfg",
-    "sha256": "348fac2f66728fcc5a595b0e5e30b6c50f5ed718af886064935b8d45632e85a1"
    },
    {
     "type": "link",
@@ -1105,11 +1040,6 @@
     "type": "file",
     "path": "/system/lib/dll/pam/pam_self.so",
     "sha256": "152adde5ca1f07d27e0719307acbe38649372f9a0bba5e2bcdf5e203e37a33ec"
-   },
-   {
-    "type": "file",
-    "path": "/system/lib/dll/tabrm_rm_mod_intel.so",
-    "sha256": "711f2d57706e15a196738122a2b9cd96e57848e403f3682d5f048e2448b4c5ee"
    },
    {
     "type": "file",
@@ -1213,11 +1143,6 @@
    },
    {
     "type": "file",
-    "path": "/system/lib/libtcti_tabrm.so.1",
-    "sha256": "8e10c4747dbc9f13016869f7310d01cfb65db3bd9e52fcc24f1dd639b0fc0fdf"
-   },
-   {
-    "type": "file",
     "path": "/system/lib/libtracelog.so.1",
     "sha256": "dcaae2536909564b26485d6e414d51cd858f20f59ccba8367a66a2c6a5613921"
    },
@@ -1291,21 +1216,21 @@
    {
     "type": "file",
     "path": "/system/bin/witnessd",
-    "sha256": "ea3d1576dd96d99904e2006104b18f573e125b3690f97642f9a9defe6879b5b4"
+    "sha256": "f8fe3eb71faa40327779c95b707345d3db08de2831d6058ac84edee96c15d29a"
    }
   ]
  },
  "pcr": {
-  "8": "c92fe3aefc6150b3d6f940de9dd0cdeea1251549cfe046e212ee0907ef896599",
-  "9": "18426f12c9243fdbe974b6f9fce2b8e9c4e5425c24afbb251743c485f2c15281",
-  "4": "8794c3d67a8df41dc1e6f2501989e1ebab0ee9c4594d8e920ca9b524e146b114",
-  "5": "cbb4f1416fc84ec2e127f2511348f18d6e9c9d4a56d2b32ed2267231ab72a439"
+  "8": "a067112a2ed231432fab10a43c91e860fc2cbea496029f238aa1c55a7ad3c1f1",
+  "9": "fa35a77b25fe918dfa57782d2561d8f60f865a6553ad75832c2bc628f7375689",
+  "4": "695cd8f042d262d2ae5202bd4c69cf058dffd03fcf9fd4566cbcededbdf82d7a",
+  "5": "c8bf41740ebc7e180fa6c64e4e768380944ef75f1e145dbaeb8e01bfe8af1480"
  },
  "files": {
-  "/system/etc/build.date": "cf83fb5cabac7199854eac785a952354caf14c44401b8c859eff8208a086d0d5",
+  "/system/etc/build.date": "8bbf7a36c41dd0c76b9bdb7a31b95f8b3bde6da49584542a6411237712a3ba61",
   "/system/etc/profile": "61f2a9b1d5a4a75dcf262baaa69a4c8e747bd23827e138882d82682411068662",
   "/system/bin/start_net.sh": "abe38f049ea2bd08193ea3d25f40238ffa4852b917e76bedb2764aa430c516cc",
-  "/system/etc/startup/post_startup.sh": "71f82959f3e5878e87548af90159e784a3f3a3a45e4278994ba4a27db765cd49",
+  "/system/etc/startup/post_startup.sh": "abdec35190cb51c3250eeee4aaeff236c9d05f3476d734dc6499711d0e302527",
   "/system/lib/libstdc++.so.6": "7334d7c24ad7cef3ae5389af399eebcaf919610b67c1f43836d3881e38b40dc4",
   "/system/lib/librcheck.so.1": "4a3add8a4cbc33bb6ed8fad3bdc04e58d68f523c1ac928e36b38096f38f36168",
   "/system/lib/librcheck.so": "e99cc26a0cebc3cae1e8059ad914539bec35197bc0855bd7698716331998b992",
@@ -1448,24 +1373,9 @@
   "/system/lib/libtss2-rc.so.1": "80d9b3a872e6fd2a881287ff0580a5b57976e9f838b1e50b261ddad2fe2a3cb4",
   "/system/lib/libtss2-tctildr.so.1": "46edcabaca49bfb458004966076d6e4fe3c8a4f08969c377c8ce84d2f12f273e",
   "/system/lib/libtss2_helper.so.1": "e71146d96349f6104950cd497f7d363bf7abcceb38a92ab4d7d59bc0521a3cb0",
-  "/system/lib/libtcti_tabrm.so.1": "8e10c4747dbc9f13016869f7310d01cfb65db3bd9e52fcc24f1dd639b0fc0fdf",
-  "/system/lib/dll/tabrm_rm_mod_intel.so": "711f2d57706e15a196738122a2b9cd96e57848e403f3682d5f048e2448b4c5ee",
-  "/system/bin/tabrm": "4a94ebfed087e85a7ef5597df29749d838705af73e866501e3609ad12310d72a",
-  "/system/bin/tpm2_getrandom": "770fcfdc0024d842f5caa1e03c44bccac820591f2f826ca92dc72eb03b3c66b6",
-  "/system/bin/tpm2_getcap": "d9f076167f8c98916b7d4eb4fb405787c72f3d63e62cc3dbf39703b467071e61",
-  "/system/bin/tpm2_pcrread": "7f5ce2887854d2800cd6ac0617bf5a47e65573be5d428e8685232a6d5c89e59b",
-  "/system/bin/tpm2_pcrextend": "f4bd2f636b37ce7e391dd132cfb261725eee065e9be8330f0eaf2099feac257d",
-  "/system/bin/tpm2_createek": "0d3586e550a251442caab90828eb5112e3b42b8ce2525ccfdbcbe75b604a88d3",
-  "/system/bin/tpm2_createak": "e847fe508a41d22fa2463da932c60f7181913f1ba8d1428e2502dab43d0686ba",
-  "/system/bin/tpm2_createprimary": "4fe3824d6ea7997f94b944592232978248be97b5963ab532b86f3b9e8a91446f",
-  "/system/bin/tpm2_quote": "5f1fba4ef3d847e8f50a01ff9ac00f895bd6f4608af75d285efdb6a10ff59d1c",
-  "/system/bin/tpm2_readpublic": "4206fccd989d13ff3806f15cdf1dfc465e57f96580e1b519f0a80df6ce7c99d8",
-  "/system/bin/tpm2_flushcontext": "6170d5587388fab58aed99d92080c42b90fa350f76576365a95e0dcc700d15b8",
-  "/system/bin/tpm2_startup": "6200320e8b8b6f9e02b76f2ade4ac8716dbf6c337027eaec7500ac0c78a69d99",
   "/system/lib/libtss2-tcti-witness.so.0": "12773f1ceb45127562fee2f4f98abad87b8d115569b3df3b5bbb73bd1a541705",
   "/system/bin/tpm-raw": "efe0c50b456f6ad93f0bd077450694a87b50a5946ffe6c2e45c0200e3e974d6b",
-  "/system/bin/witnessd": "ea3d1576dd96d99904e2006104b18f573e125b3690f97642f9a9defe6879b5b4",
-  "/system/etc/witness/tabrm.cfg": "348fac2f66728fcc5a595b0e5e30b6c50f5ed718af886064935b8d45632e85a1",
+  "/system/bin/witnessd": "f8fe3eb71faa40327779c95b707345d3db08de2831d6058ac84edee96c15d29a",
   "/system/bin/ascii": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
   "/system/bin/base64": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
   "/system/bin/basename": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
@@ -1558,6 +1468,6 @@
   "/system/bin/yes": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051",
   "/system/bin/zcat": "6a996df5995e6108cf9b1bb33d5ddaf79fd356a9b9d5e708c28d5b8715722051"
  },
- "ifs_authenticode": "b67321ce4f196ae1a25ff3aa5edf8182b0c90678a6957989cb58672fc521f9d8",
- "gpt_event": "6bed43ce27f84c25181bd61846395fe90be9c5379ee17771697b09fd108f8a1b"
+ "ifs_authenticode": "967392b9d8b6f14e87b88c754280361df4d6e63d5fe7e5e94ce79daefa05a9d4",
+ "gpt_event": "e59f75be6abe85113cfd5aacb8aae51ef0461d060a5178b97dd9e856f95c2e3e"
 }

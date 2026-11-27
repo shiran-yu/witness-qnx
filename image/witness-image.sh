@@ -3,8 +3,8 @@
 # Add the Witness layer to a mkqnximage image directory, through mkqnximage's own snippet mechanism:
 #   IFS:       dev-tpm-tis, witness-measure, the application manifest (all covered by the firmware's PCR 4)
 #   boot:      driver started in the IFS script; every file and symlink on /system measured into PCR 8 right after mount
-#   system:    QNX TCG stack (tss2, tabrm), libtss2-tcti-witness, tabrm config, witnessd
-#   post-start tabrm on /dev/tpmrm0 over our TCTI; application layer measured into PCR 9; witnessd
+#   system:    QNX TCG stack (tss2 ESYS/MU/RC/tctildr), libtss2-tcti-witness, witnessd
+#   post-start application layer measured into PCR 9; witnessd (ESYS over our TCTI to /dev/tpm0)
 # Usage: witness-image.sh <image-dir>   then: (cd <image-dir> && mkqnximage --build)
 set -euo pipefail
 
@@ -57,20 +57,14 @@ lib/libtss2-sys.so.1=usr/lib/libtss2-sys.so.1
 lib/libtss2-rc.so.1=usr/lib/libtss2-rc.so.1
 lib/libtss2-tctildr.so.1=usr/lib/libtss2-tctildr.so.1
 lib/libtss2_helper.so.1=lib/libtss2_helper.so.1
-lib/libtcti_tabrm.so.1=lib/libtcti_tabrm.so.1
-lib/dll/tabrm_rm_mod_intel.so=lib/dll/tabrm_rm_mod_intel.so
-[perms=0555] bin/tabrm=sbin/tabrm
 lib/libtss2-tcti-witness.so.0=$BUILD/libtss2-tcti-witness.so.0
 [perms=0555] bin/tpm-raw=$BUILD/tpm-raw
 [perms=0555] bin/witnessd=$BUILD/witnessd
-[perms=0444] etc/witness/tabrm.cfg=$HERE/tabrm.cfg
 EOF
 
-# 6. post start: resource manager over our TCTI; application layer measured into PCR 9, then started
+# 6. post start: application layer measured into PCR 9, then started. witnessd is the only TPM client
+# after boot, through our TCTI straight to /dev/tpm0 (QNX's tabrm lost a request under load twice).
 cat > "$SNIPPETS/post_start.witness" <<'EOF'
-echo "---> Witness: starting tabrm (/dev/tpmrm0) over libtss2-tcti-witness"
-START_P(tabrm_t) tabrm -C /system/etc/witness/tabrm.cfg
-waitfor /dev/tpmrm0 5
 echo "---> Witness: measuring applications into PCR 9"
 START_P(witness_measure_t) /proc/boot/witness-measure -p 9 -m /proc/boot/witness-apps.manifest
 echo "---> Witness: starting attestation agent (port 7650)"

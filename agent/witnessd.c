@@ -1,8 +1,9 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 /* witnessd: remote-attestation agent for QNX 8.0, built on QNX's own TSS2 ESYS stack.
  *
- * Path: witnessd -> ESYS -> tctildr default (libtcti_tabrm) -> tabrm /dev/tpmrm0
- *       -> libtss2-tcti-witness -> dev-tpm-tis /dev/tpm0 -> TPM
+ * Path: witnessd -> ESYS -> libtss2-tcti-witness -> dev-tpm-tis /dev/tpm0 -> TPM. After boot it is the
+ * only TPM client (the security policy admits no other), so it needs no resource manager. A supervisor
+ * process restarts the agent if a request outlives the watchdog.
  *
  * On start it derives the attestation key (AK: ECC P-256, restricted signing, from the endorsement
  * hierarchy, so the same key comes back on every boot of the same TPM) and loads the device key: an
@@ -26,6 +27,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -38,6 +40,7 @@
 #define QUOTE_PCR_MASK 0x0003FF /* PCR 0-9 */
 #define SEAL_PCR_MASK 0x0003B5  /* PCR 0,2,4,5,7 (firmware, boot image, disk, Secure Boot), 8 (system), 9 (apps) */
 #define DEVICE_KEY_LABEL "witness:device-key:"
+#define WATCHDOG_SECONDS 10 /* longest any one request may take */
 
 static ESYS_CONTEXT *esys;
 static ESYS_TR attestation_key = ESYS_TR_NONE;
@@ -410,6 +413,20 @@ static void answer(FILE *out, const char *request)
         offset = 0;
         if (Tss2_MU_TPMT_SIGNATURE_Marshal(device_signature, buffer, sizeof buffer, &offset) == TSS2_RC_SUCCESS)
             hex(out, buffer, offset);
+        /* TPM2_Certify: the AK vouches that a key with exactly this public area lives in this TPM */
+        TPM2B_ATTEST *certified = NULL;
+        TPMT_SIGNATURE *certify_signature = NULL;
+        if (Esys_Certify(esys, device_key, attestation_key, ESYS_TR_PASSWORD, ESYS_TR_PASSWORD, ESYS_TR_NONE, &nonce,
+                         &scheme, &certified, &certify_signature) == TSS2_RC_SUCCESS) {
+            fprintf(out, "\",\"certify\":\"");
+            hex(out, certified->attestationData, certified->size);
+            fprintf(out, "\",\"certify_signature\":\"");
+            offset = 0;
+            if (Tss2_MU_TPMT_SIGNATURE_Marshal(certify_signature, buffer, sizeof buffer, &offset) == TSS2_RC_SUCCESS)
+                hex(out, buffer, offset);
+        }
+        Esys_Free(certified);
+        Esys_Free(certify_signature);
         fprintf(out, "\"}");
     } else {
         fprintf(out, ",\"device_key_error\":");
@@ -439,7 +456,7 @@ static void serve(int port)
     int yes = 1;
     struct sockaddr_in address = {.sin_family = AF_INET, .sin_port = htons(port), .sin_addr.s_addr = INADDR_ANY};
     setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes);
-    if (listener < 0 || bind(listener, (struct sockaddr *)&address, sizeof address) != 0 || listen(listener, 4) != 0) {
+    if (listener < 0 || bind(listener, (struct sockaddr *)&address, sizeof address) != 0 || listen(listener, 16) != 0) {
         fprintf(stderr, "witnessd: cannot listen on port %d: %s\n", port, strerror(errno));
         exit(EXIT_FAILURE);
     }
@@ -450,6 +467,8 @@ static void serve(int port)
             continue;
         struct timeval timeout = {.tv_sec = 1}; /* one slow client must not stall the next */
         setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof timeout);
+        setsockopt(client, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof timeout);
+        alarm(WATCHDOG_SECONDS); /* a request that hangs anywhere (TPM, socket) ends this agent instance */
         /* separate streams: C forbids switching one stream from reading to writing without a seek */
         FILE *input = fdopen(client, "r");
         FILE *output = fdopen(dup(client), "w");
@@ -462,29 +481,62 @@ static void serve(int port)
             fclose(input);
         else
             close(client);
+        alarm(0);
     }
 }
 
-int main(int argc, char **argv)
+/* Raw TPM2 command through the TCTI (before ESYS exists). Returns the response size, or 0. */
+static size_t raw_command(TSS2_TCTI_CONTEXT *tcti, const uint8_t *cmd, size_t len, uint8_t *resp, size_t max)
 {
-    int port = DEFAULT_PORT, opt, foreground = 0;
-    while ((opt = getopt(argc, argv, "p:l:s:f")) != -1) {
-        switch (opt) {
-        case 'p': port = atoi(optarg); break;
-        case 'l': eventlog_path = optarg; break;
-        case 's': state_dir = optarg; break;
-        case 'f': foreground = 1; break;
-        default:
-            fprintf(stderr, "usage: witnessd [-p port] [-l eventlog] [-s state-dir] [-f]\n");
-            return 2;
-        }
-    }
-    signal(SIGPIPE, SIG_IGN);
+    size_t size = max;
+    if (Tss2_Tcti_Transmit(tcti, len, cmd) != TSS2_RC_SUCCESS ||
+        Tss2_Tcti_Receive(tcti, &size, resp, TSS2_TCTI_TIMEOUT_BLOCK) != TSS2_RC_SUCCESS || size < 10)
+        return 0;
+    return size;
+}
 
+/* witnessd is the only TPM client after boot and talks to the driver directly, so objects and sessions
+ * left loaded by a previous instance (killed by the watchdog) are flushed before starting. */
+static void flush_stale_handles(TSS2_TCTI_CONTEXT *tcti)
+{
+    static const uint32_t ranges[] = {0x80000000, 0x02000000, 0x03000000}; /* transient, HMAC/policy sessions */
+    for (size_t r = 0; r < sizeof ranges / sizeof *ranges; r++) {
+        uint8_t cmd[22] = {0x80, 0x01, 0, 0, 0, 22, 0, 0, 0x01, 0x7A, 0, 0, 0, 1}; /* GetCapability(HANDLES) */
+        uint8_t resp[512];
+        cmd[14] = ranges[r] >> 24;
+        cmd[21] = 64; /* propertyCount */
+        size_t size = raw_command(tcti, cmd, sizeof cmd, resp, sizeof resp);
+        if (size < 19)
+            continue;
+        uint32_t count = (uint32_t)resp[15] << 24 | resp[16] << 16 | resp[17] << 8 | resp[18];
+        for (uint32_t i = 0; i < count && 19 + 4 * (i + 1) <= size; i++) {
+            uint8_t flush[14] = {0x80, 0x01, 0, 0, 0, 14, 0, 0, 0x01, 0x65}; /* FlushContext */
+            memcpy(flush + 10, resp + 19 + 4 * i, 4);
+            uint8_t reply[16];
+            raw_command(tcti, flush, sizeof flush, reply, sizeof reply);
+        }
+        if (count)
+            fprintf(stderr, "witnessd: flushed %u stale TPM handle(s)\n", count);
+    }
+}
+
+static void watchdog_expired(int signo)
+{
+    (void)signo;
+    static const char message[] = "witnessd: watchdog: request took too long, restarting\n";
+    write(STDERR_FILENO, message, sizeof message - 1);
+    _exit(70);
+}
+
+static int run_agent(int port, const char *tcti_conf)
+{
     TSS2_TCTI_CONTEXT *tcti = NULL;
-    TSS2_RC rc = Tss2_TctiLdr_Initialize(NULL, &tcti); /* QNX default: tabrm (/dev/tpmrm0) */
-    if (rc == TSS2_RC_SUCCESS)
+    alarm(WATCHDOG_SECONDS * 3); /* start-up, including provisioning */
+    TSS2_RC rc = Tss2_TctiLdr_Initialize(tcti_conf, &tcti);
+    if (rc == TSS2_RC_SUCCESS) {
+        flush_stale_handles(tcti);
         rc = Esys_Initialize(&esys, tcti, NULL);
+    }
     if (rc != TSS2_RC_SUCCESS) {
         fail("TPM stack", rc);
         return EXIT_FAILURE;
@@ -494,8 +546,41 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
     provision_or_load();
-    if (!foreground && fork() > 0)
-        return EXIT_SUCCESS;
+    alarm(0);
     serve(port);
     return EXIT_SUCCESS;
+}
+
+int main(int argc, char **argv)
+{
+    int port = DEFAULT_PORT, opt, foreground = 0;
+    const char *tcti_conf = "witness:/dev/tpm0";
+    while ((opt = getopt(argc, argv, "p:l:s:t:f")) != -1) {
+        switch (opt) {
+        case 'p': port = atoi(optarg); break;
+        case 'l': eventlog_path = optarg; break;
+        case 's': state_dir = optarg; break;
+        case 't': tcti_conf = optarg; break;
+        case 'f': foreground = 1; break;
+        default:
+            fprintf(stderr, "usage: witnessd [-p port] [-l eventlog] [-s state-dir] [-t tcti] [-f]\n");
+            return 2;
+        }
+    }
+    signal(SIGPIPE, SIG_IGN);
+    signal(SIGALRM, watchdog_expired);
+    if (!foreground && fork() > 0)
+        return EXIT_SUCCESS;
+
+    /* Supervisor: the agent runs in a child; if the watchdog or a crash ends it, start a fresh one. */
+    for (unsigned restarts = 0;; restarts++) {
+        pid_t child = fork();
+        if (child == 0)
+            return run_agent(port, tcti_conf);
+        int status = 0;
+        if (child < 0 || waitpid(child, &status, 0) < 0)
+            return EXIT_FAILURE;
+        fprintf(stderr, "witnessd: agent exited (status 0x%x), restart %u\n", status, restarts + 1);
+        sleep(restarts < 5 ? 1 : 10);
+    }
 }
