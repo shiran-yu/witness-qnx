@@ -23,3 +23,19 @@ def test_device_key_policy_depends_only_on_the_release_key():
     a, b = ec.generate_private_key(ec.SECP256R1()), ec.generate_private_key(ec.SECP256R1())
     assert device_key_policy(*public_xy(a)) == device_key_policy(*public_xy(a))
     assert device_key_policy(*public_xy(a)) != device_key_policy(*public_xy(b))
+
+
+def test_update_release_changes_only_the_replaced_file(tmp_path):
+    from witness.reference import build_reference
+    import os
+    image = os.path.join(os.path.dirname(__file__), "..", "..", ".work", "vm")
+    if not os.path.exists(os.path.join(image, "output", "build", "system.build")):
+        import pytest
+        pytest.skip("needs a built image in src/.work/vm")
+    v1 = build_reference(image)
+    new = tmp_path / "sshd_config"
+    new.write_text("MaxAuthTries 3\n")
+    v2 = build_reference(image, {"/system/etc/ssh/sshd_config": str(new)})
+    changed = [p for p in v1["files"] if v1["files"][p] != v2["files"][p]]
+    assert changed == ["/system/etc/ssh/sshd_config"]
+    assert v1["pcr"]["8"] != v2["pcr"]["8"] and v1["pcr"]["4"] == v2["pcr"]["4"]

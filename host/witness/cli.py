@@ -74,6 +74,8 @@ def main(argv=None) -> int:
     reference = commands.add_parser("reference", help="compute reference values from a mkqnximage directory")
     reference.add_argument("image_dir")
     reference.add_argument("-o", "--output", default="reference.json")
+    reference.add_argument("--replace", action="append", default=[], metavar="TARGET_PATH=HOST_FILE",
+                           help="update release: the build with this file replaced (repeatable)")
     reference.add_argument("--release-key", metavar="PEM",
                            help="sign this release's PCR policy (writes <output>.policy for the device)")
 
@@ -122,7 +124,7 @@ def main(argv=None) -> int:
         print(f"wrote {args.path} (keep it on the build host) and {args.path}.pub (for the image)")
         return 0
     if args.command == "reference":
-        result = build_reference(args.image_dir)
+        result = build_reference(args.image_dir, dict(item.split("=", 1) for item in args.replace))
         if args.release_key:
             from .release import load_release_key, policy_file_text, sign_release
             policy = sign_release(result, load_release_key(args.release_key))

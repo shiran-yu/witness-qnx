@@ -8,6 +8,7 @@
 #   demo.sh verify     challenge the device and appraise its boot against the release
 #   demo.sh tamper [config|app|lib|data]  modify the device the way an attacker would, then reboot
 #   demo.sh restore    undo the tamper, reboot
+#   demo.sh update     signed release v2 (one hardened file) installed over the air; the device keeps its key
 #   demo.sh down       power off
 #   demo.sh attack     as root on the device, try to use the TPM directly (denied by the security policy)
 # Env: WORK (default src/.work), SSH_PORT (10022; attestation on SSH_PORT+1), SECPOL (secure|no)
@@ -128,6 +129,25 @@ restore)
                      [ -f $o ] && cp $o $t.restore && mv $t.restore $t && rm $o; done; true'
     reboot_device
     ;;
+update)
+    # release v2 = the released build plus one hardened file; the device keeps its key (no re-provisioning)
+    say "build host: release v2 hardens sshd (MaxAuthTries 3); reference computed and signed with the release key"
+    mkdir -p "$WORK/release-v2"
+    "${SSH[@]}" 'cat /system/etc/ssh/sshd_config' > "$WORK/release-v2/sshd_config"
+    python3 -c 'import hashlib,json,sys; r=json.load(open(sys.argv[1]))["files"]["/system/etc/ssh/sshd_config"]
+sys.exit(hashlib.sha256(open(sys.argv[2],"rb").read()).hexdigest() != r)' "$WORK/reference.json" "$WORK/release-v2/sshd_config" \
+        || { echo "sshd_config on the device is not the released one; restore first" >&2; exit 1; }
+    echo "MaxAuthTries 3" >> "$WORK/release-v2/sshd_config"
+    "${WITNESS[@]}" reference "$IMAGE" -o "$WORK/reference-v2.json" --release-key "$RELEASE_KEY" \
+        --replace /system/etc/ssh/sshd_config="$WORK/release-v2/sshd_config"
+    cp "$WORK/reference.json" "$WORK/reference-v1.json" && cp "$WORK/reference.json.policy" "$WORK/reference-v1.json.policy"
+    cp "$WORK/reference-v2.json" "$WORK/reference.json" && cp "$WORK/reference-v2.json.policy" "$WORK/reference.json.policy"
+    say "device: the update agent installs the file and the signed v2 policy, then reboots"
+    "${SSH[@]}" 'cat > /system/etc/ssh/.sshd_config.new && mv /system/etc/ssh/.sshd_config.new /system/etc/ssh/sshd_config' \
+        < "$WORK/release-v2/sshd_config"
+    push_release_policy
+    reboot_device
+    ;;
 attack)
     say "root on the device tries to extend PCR 8, run its own agent with the agent's type, borrow the measurer's type, and plant a boot hook"
     "${SSH[@]}" 'for c in "tpm-raw 80020000004100000182000000080000000940000009000000000000000001000b$(printf %064d 0)" \
@@ -142,7 +162,7 @@ down)
     (cd "$IMAGE" && "$SRC/scripts/vm.sh" stop)
     ;;
 *)
-    sed -n '3,14p' "$0"
+    sed -n '3,15p' "$0"
     exit 2
     ;;
 esac

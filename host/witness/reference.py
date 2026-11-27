@@ -70,7 +70,8 @@ def read_manifest(path: str) -> list[str]:
     return entries
 
 
-def build_reference(image_dir: str) -> dict:
+def build_reference(image_dir: str, replace: dict[str, str] | None = None) -> dict:
+    """`replace` maps on-target paths to host files: an update release is the build plus those files."""
     build = os.path.join(image_dir, "output", "build")
     ifs_path = os.path.join(image_dir, "output", "ifs.bin")
     uefi = "BOOTx64.EFI" in open(os.path.join(build, "boot_part.build"), errors="replace").read() \
@@ -87,6 +88,10 @@ def build_reference(image_dir: str) -> dict:
     config = {path: digest for path, digest in file_digests(os.path.join(build, "data.build"), image_dir, "/data",
                                                              links).items() if path.startswith(CONFIG_DIR + "/")}
     files.update(config)
+    for path, host_file in (replace or {}).items():
+        if path not in files or path in links:
+            raise ValueError(f"{path} is not a file of this image")
+        files[path] = hashlib.sha256(open(host_file, "rb").read()).hexdigest()
 
     # PCR 8: witness-measure -r /system, then -r /data/var/etc (each every file and symlink in strcmp order), then the marker
     events, pcr = {}, {}
@@ -102,6 +107,7 @@ def build_reference(image_dir: str) -> dict:
         "events": events,
         "pcr": pcr,
         "files": files,
+        **({"replaced": sorted(replace)} if replace else {}),
     }
     if uefi:
         authenticode = authenticode_digest(open(ifs_path, "rb").read())
