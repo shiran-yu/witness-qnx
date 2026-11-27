@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
+import os
 import socket
 import threading
 import time
@@ -70,3 +71,17 @@ def test_verify_requests_do_not_queue_on_a_busy_device(reference):
         reply = json.load(urllib.request.urlopen(urllib.request.Request(url, method="POST")))
     server.shutdown()
     assert reply["name"] == "ecu-01" and calls == []
+
+
+def test_fleet_replay_reproduces_the_readme_screenshot():
+    """tests/fixtures/fleet: three QEMU devices, each with its own TPM and enrollment (captured by fleet.sh)."""
+    from witness.dashboard import replay_fleet
+    fleet = replay_fleet(os.path.join(os.path.dirname(__file__), "fixtures", "fleet"), None, 10, None)
+    for device in fleet.devices.values():
+        fleet.verify(device)
+    got = {d["name"]: (d["state"], d["sealed"], [f["title"] for f in d["findings"]]) for d in fleet.overview()["devices"]}
+    assert got == {
+        "gateway-a": ("trusted", "unsealed", []),
+        "gateway-b": ("not trusted", "locked", ["/system/etc/ssh/sshd_config rolled back to release 1"]),
+        "gateway-c": ("not trusted", "locked", ["/system/lib/libtss2-rc.so.1 changed since the release"]),
+    }

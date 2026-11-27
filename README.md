@@ -2,8 +2,8 @@
 
 > **For** operators and manufacturers of QNX devices in the field (vehicle gateways, robot controllers,
 > medical and industrial devices) who must show that each device runs the software they released.
-> **Try it without QNX:** `cd host && uv run witness dashboard --replay tests/fixtures` (captured TPM
-> evidence, verified offline). **On QNX 8.0 + QEMU:** `demo/demo.sh build up enroll verify`
+> **Try it without QNX:** `cd host && uv run witness dashboard --replay tests/fixtures/fleet` (the fleet
+> below, from captured TPM evidence, verified offline). **On QNX 8.0 + QEMU:** `demo/demo.sh build up enroll verify`
 > ([Build and run](#build-and-run)). **Where to look:** category Low-level Software, a TPM driver as a QNX
 > resource manager ([Evidence of QNX use](#evidence-of-qnx-use)) · QNX-specific technologies, one row per
 > technology ([QNX-specific technologies](#qnx-specific-technologies)) · codelab
@@ -227,7 +227,8 @@ of 12 checks) and only the device key fails: the boot is a genuine v1, and the T
 cd host
 uv run witness dashboard -r ../.work/reference.json --state ../.work/state --device ecu-01=127.0.0.1:10023 \
     --environment "QNX 8.0 on QEMU, software TPM"
-uv run witness dashboard --replay tests/fixtures     # no QNX or TPM needed: captured evidence, verified offline
+uv run witness dashboard --replay tests/fixtures/fleet   # no QNX or TPM needed: three captured devices, verified offline
+uv run witness dashboard --replay tests/fixtures     # one trusted device and one with a changed config
 uv run witness dashboard --replay tests/fixtures/release   # signed release v2: current device, and one rolled back to v1
 ```
 

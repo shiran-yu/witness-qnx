@@ -166,8 +166,9 @@ class Fleet:
         return keys
 
     def enrollment(self, device: Device) -> dict | None:
-        if device.evidence:
-            return self.fixed_enrollment
+        if device.evidence:  # a fleet replay keeps one enrollment per device (each has its own TPM)
+            own = os.path.join(os.path.dirname(device.evidence), f"enrollment-{device.name}.json")
+            return json.load(open(own)) if os.path.exists(own) else self.fixed_enrollment
         from .cli import enrollment_path
         path = enrollment_path(self.state, device.address)
         return json.load(open(path)) if os.path.exists(path) else None
