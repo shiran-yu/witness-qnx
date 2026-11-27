@@ -17,13 +17,14 @@ signature from the TPM, three questions:
    `CHANGED PCR 8 /system/etc/ssh/sshd_config`.
 
 Each device also holds a **device key**, created inside its TPM, that the TPM lets it use only when PCR
-0, 2, 4, 5, 7, 8 and 9 (firmware, boot image, disk, system partition, applications) equal the released
+0, 2, 4, 5, 7, 8 and 9 (firmware, boot image, disk, system partition and `/etc`, applications) equal the released
 state. The key signs every attestation request, and the verifier checks that its TPM policy is
 exactly the released state, computed from the build, so a tampered device loses its own credential
 and cannot fake having it. A QNX security policy confines the TPM: once the device has booted, even
 `root` logged in over ssh cannot open `/dev/tpm0` or take the agent's type, so it cannot extend PCRs
-or use either key. The boot script itself can (it starts those components), so everything it reads
-is measured first.
+or use either key. The boot script itself can (it starts those components), so Witness replaces
+the stock mount step: nothing on `/system`, in `/etc` or on the EFI partition runs before it is
+measured, and the stock `/boot/onboot` hook is not run at all.
 
 Everything below runs on QNX 8.0 under QEMU (x86_64, UEFI) with a software TPM (swtpm) attached
 through the standard TPM TIS interface, the same register interface a discrete TPM chip exposes.
@@ -73,15 +74,19 @@ must not become a new way into the device. QNX's architecture gives both, and Wi
   request outlives a 10 s watchdog. Network clients cannot trigger that: up to 64 are read at once,
   each must send its request within 2 s, and the watchdog starts only after the request is in.
 - *Least privilege enforced by the kernel.* The QNX security policy gives each process only what it
-  needs: the driver gets its one 4 KiB register page and its interrupt; only the measurement tool and
-  the agent may reach the driver; a root login gets neither the driver nor their types.
+  needs: the driver gets its one 4 KiB register page and its interrupt; after boot only the
+  measurement tool and the agent may reach the driver (the boot script, which starts them, can too);
+  a root login gets neither the driver nor their types.
 - *Priority-ordered service.* A QNX server receives messages in priority order and runs at its
   client's priority. witnessd runs at priority 8, below QNX's default 10, so the TPM driver serves
   attestation at 8 too: it never preempts normal-priority work. This is the design; we have not
   measured control-loop latency under attestation load on real hardware (QEMU on WSL2 is too noisy).
 - *Measure before use.* The driver and the measurement tool live in the boot image, which the
   firmware measures, and run from QNX's own boot script before it reads anything on the system
-  partition or in `/etc` (where `start_net.sh` sources `settings/network` as shell code).
+  partition or in `/etc` (where `start_net.sh` sources `settings/network` as shell code). The stock
+  `mount_fs.sh` would run `/boot/onboot` and `/system/bin/cleanup_tmp` first, so Witness skips it,
+  mounts the partitions itself, measures, and only then runs `cleanup_tmp`; `/boot` is mounted
+  read-only.
 
 ## Build and run
 
@@ -140,6 +145,8 @@ tpm-raw: open /dev/tpm0: Operation not permitted
 on: Operation not permitted (/system/bin/witnessd)
 # on -T witness_measure_t /proc/boot/witness-measure -p 8 -s forged
 on: Operation not permitted (/proc/boot/witness-measure)
+# echo touch /tmp/pwned > /boot/onboot                 (a boot hook; it would not be run anyway)
+sh: cannot create /boot/onboot: Read-only file system
 ```
 
 After `tamper config` and a reboot:
@@ -219,6 +226,10 @@ driver chose (`interrupt driven` after its interrupt self-test, or polling):
 
 ## Limits
 
+- One reference describes one release, byte for byte, including `/etc`: every device checked against
+  it must have the same passwords, hostname and network settings. A device with its own settings
+  needs its own reference (or the per-device files moved out of `/etc`), and an admin change such as
+  `passwd` makes the device NOT TRUSTED until it is re-released.
 - The TPM is swtpm, a software TPM, attached through the standard TIS interface. The driver is written
   against the TIS specification and the register interface a discrete TPM exposes; it has not run on
   physical TPM hardware.

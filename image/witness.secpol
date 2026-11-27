@@ -58,6 +58,10 @@ ability network/jailroot allow { root nonroot };
 # === Rules for type default ============
 allow_link default {
     /proc/boot/libsecpol.so.1
+    # Witness: /system and /data placeholders so mount_fs.sh (which would run /boot/onboot and
+    # /system/bin/cleanup_tmp unmeasured) is skipped; witness-image.sh mounts and measures instead
+    /system
+    /data
 };
 
 # === Rules for type devb_t ============

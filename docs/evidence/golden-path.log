@@ -1,7 +1,7 @@
 ==> cross-building Witness for QNX 8.0 x86_64
 ==> creating a UEFI QNX 8.0 image with the Witness layer
 ==> computing reference values from the build output
-wrote <repo>/.work/reference.json: boot=uefi PCR4=57d423894b73… PCR5=c6fd0f833c55… PCR8=5cda8d054462… PCR9=a73ab2d338b8…, 253 PCR 8 + 1 PCR 9 expected events, 252 files
+wrote <repo>/.work/reference.json: boot=uefi PCR4=c2a443ca11d8… PCR5=26aea97b30d1… PCR8=127defac2c8b… PCR9=a73ab2d338b8…, 253 PCR 8 + 1 PCR 9 expected events, 252 files
 started: ssh -p 10022 root@127.0.0.1 (console: <repo>/.work/vm/output/console.log, accel: -enable-kvm -cpu host)
 ==> waiting for witnessd
 ---> Witness: starting TPM driver
@@ -38,7 +38,7 @@ enrolled 127.0.0.1:10023: <repo>/.work/state/enrolled-127.0.0.1_10023.json
   pass  system and /etc (PCR 8)      253 measurement(s) match the release
   pass  applications (PCR 9)         1 measurement(s) match the release
   pass  device key (PCR 0,2,4,5,7,8,9) TPM released the key bound to the released boot state; it signed our nonce
-==> root on the device tries to extend PCR 8, run its own agent with the agent's type, and borrow the measurer's type
+==> root on the device tries to extend PCR 8, run its own agent with the agent's type, borrow the measurer's type, and plant a boot hook
 # tpm-raw 80020000004100000182000000080000000940000009000000000000000001000b0000000000000000000000000000000000000000000000000000000000000000
 tpm-raw: open /dev/tpm0: Operation not permitted
   denied
@@ -47,6 +47,9 @@ on: Operation not permitted (/system/bin/witnessd)
   denied
 # on -T witness_measure_t /proc/boot/witness-measure -p 8 -s forged
 on: Operation not permitted (/proc/boot/witness-measure)
+  denied
+# echo touch /tmp/pwned > /boot/onboot
+sh: cannot create /boot/onboot: Read-only file system
   denied
 ==> attacker enables password logins in /system/etc/ssh/sshd_config
 ==> rebooting
